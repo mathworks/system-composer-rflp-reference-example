@@ -1,6 +1,8 @@
+This project is a complete, runnable reference example for systems engineering teams to follow an RFLP methodology for system design in System Composer and carry it through executable analysis. It shows what that workflow looks like when requirements traceability, physical-variant trade studies, formal compliance checks, and behavioral simulation all live in one project rather than as disconnected artifacts.
+
 # Intergalactic Vegan Soup Factory
 
-A space-based vegan soup production facility, modeled end-to-end using a full **RFLP** (Requirements–Functional–Logical–Physical) architecture in MathWorks System Composer.
+A space-based vegan soup production facility, modeled end-to-end using a full **RFLP** (Requirements–Functional–Logical–Physical) architecture in MathWorks System Composer&trade;.
 
 The facility receives ingredient deliveries by rocket, stores and prepares them, cooks soup at scale, performs quality assurance, packages the result for interstellar transit, and dispatches it to customers across the galaxy — all under tight mass, power, cost, and volume budgets, across a wide range of ambient gravity conditions, with a five-being crew.
 
@@ -8,13 +10,17 @@ The facility receives ingredient deliveries by rocket, stores and prepares them,
 
 | Tool | Version |
 |---|---|
-| MATLAB | R2026a |
-| System Composer | R2026a |
-| Requirements Toolbox | R2026a |
-| Simulink | R2026a |
-| Stateflow | R2026a |
-| Simscape | R2026a |
-| Simulink Test | R2026a |
+| MATLAB&reg; | R2026a |
+| System Composer&trade; | R2026a |
+| Requirements Toolbox&trade; | R2026a |
+| Simulink&reg; | R2026a |
+| Stateflow&reg; | R2026a |
+| Simscape&trade; | R2026a |
+| Simulink&reg; Test&trade; | R2026a |
+
+## Getting started
+
+Open the MATLAB project at [`IntergalacticVeganSoupFactory.prj`](IntergalacticVeganSoupFactory.prj) to load project paths and artifact context. Then run [`analysis/pipeline/runFullAnalysis.m`](analysis/pipeline/runFullAnalysis.m) to regenerate the main analysis outputs, including the compliance gate and trade-study results; run `tests/runAllTests` afterward if you want to verify those results and refresh requirements verification status.
 
 ## Folder structure
 
