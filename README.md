@@ -1,3 +1,5 @@
+[![Open in MATLAB Online](https://www.mathworks.com/images/responsive/global/open-in-matlab-online.svg)](https://matlab.mathworks.com/open/github/v1?repo=MathWorks/system-composer-rflp-reference-example​&project=IntergalacticVeganSoupFactory.prj)
+
 This project is a complete, runnable reference example for systems engineering teams to follow an RFLP methodology for system design in System Composer and carry it through executable analysis. It shows what that workflow looks like when requirements traceability, physical-variant trade studies, formal compliance checks, and behavioral simulation all live in one project rather than as disconnected artifacts.
 
 # Intergalactic Vegan Soup Factory
