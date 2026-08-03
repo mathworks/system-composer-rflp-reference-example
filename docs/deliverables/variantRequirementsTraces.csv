@@ -1,0 +1,85 @@
+SR,Requirement,Variant,Implemented,Gate,TestEvidence,Verdict
+SR-GS-001,Recipe count,HyperCook,functional,-,"""HyperCook recipe rotation""",verified
+SR-GS-002,Throughput,HyperCook,functional,PASS,"""HyperCook nominal""",verified
+SR-GS-003,Automation level,HyperCook,functional,PASS,"-",gate PASS
+SR-GS-004,Operator count,HyperCook,functional,PASS,"-",gate PASS
+SR-GS-005,Shipping manifest,HyperCook,functional,-,"-",-
+SR-GS-006,Transport loading time,HyperCook,functional,-,"""HyperCook transport loading""",verified
+SR-GS-007,Contamination detection,HyperCook,direct + functional,-,"""HyperCook contamination 2 percent""",verified
+SR-GS-008,Serving temperature,HyperCook,direct + functional,-,"-",-
+SR-GS-009,Container seal life,HyperCook,direct + functional,-,"-",-
+SR-GS-010,Inventory accuracy,HyperCook,functional,-,"-",-
+SR-GS-011,Mass budget,HyperCook,direct,PASS,"-",gate PASS
+SR-GS-012,Power budget,HyperCook,direct,PASS,"-",gate PASS
+SR-GS-013,Cost budget,HyperCook,direct,FAIL,"no test case; formal gate FAILS",FAILS
+SR-GS-014,Volume budget,HyperCook,direct,FAIL,"no test case; formal gate FAILS",FAILS
+SR-GS-015,Gravity operating range,HyperCook,direct + functional,PASS,"""HyperCook at 0.1 g""; ""HyperCook at 12 g""",verified
+SR-GS-016,Structural 12 g tolerance,HyperCook,direct + functional,-,"-",-
+SR-GS-017,Concurrent rocket support,HyperCook,direct + functional,-,"-",-
+SR-GS-018,Rocket turnaround,HyperCook,direct + functional,-,"""HyperCook rocket turnaround""",verified
+SR-GS-019,Rocket refueling,HyperCook,direct + functional,-,"-",-
+SR-GS-020,Temperature-controlled storage,HyperCook,direct + functional,-,"-",-
+SR-GS-021,Ingredient storage capacity,HyperCook,direct + functional,-,"""HyperCook storage endurance""",verified
+SR-GS-022,Cooking capacity,HyperCook,functional,-,"-",-
+SR-GS-023,Internal transfer time,HyperCook,functional,-,"-",-
+SR-GS-024,Internal transport automation,HyperCook,functional,-,"-",-
+SR-GS-025,Startup readiness,HyperCook,functional,-,"""HyperCook nominal""",verified
+SR-GS-026,Fault-induced throughput degredation,HyperCook,functional,-,"FAILS - single-string collapse, 0% retention (""HyperCook worst fault - regression baseline"")",FAILS
+SR-GS-027,Production coordination,HyperCook,functional,-,"-",-
+SR-GS-028,Preparation zone,HyperCook,functional,-,"-",-
+SR-GS-001,Recipe count,LeanBroth,functional,-,"-",-
+SR-GS-002,Throughput,LeanBroth,functional,FAIL,"FAILS - 196.8 bph vs 200 floor (""LeanBroth nominal - regression baseline"")",FAILS
+SR-GS-003,Automation level,LeanBroth,functional,PASS,"-",gate PASS
+SR-GS-004,Operator count,LeanBroth,functional,PASS,"-",gate PASS
+SR-GS-005,Shipping manifest,LeanBroth,functional,-,"-",-
+SR-GS-006,Transport loading time,LeanBroth,functional,-,"""LeanBroth transport loading""",verified
+SR-GS-007,Contamination detection,LeanBroth,direct + functional,-,"-",-
+SR-GS-008,Serving temperature,LeanBroth,direct + functional,-,"-",-
+SR-GS-009,Container seal life,LeanBroth,direct + functional,-,"-",-
+SR-GS-010,Inventory accuracy,LeanBroth,functional,-,"-",-
+SR-GS-011,Mass budget,LeanBroth,direct,PASS,"-",gate PASS
+SR-GS-012,Power budget,LeanBroth,direct,PASS,"-",gate PASS
+SR-GS-013,Cost budget,LeanBroth,direct,PASS,"-",gate PASS
+SR-GS-014,Volume budget,LeanBroth,direct,PASS,"-",gate PASS
+SR-GS-015,Gravity operating range,LeanBroth,direct + functional,PASS,"-",gate PASS
+SR-GS-016,Structural 12 g tolerance,LeanBroth,direct + functional,-,"-",-
+SR-GS-017,Concurrent rocket support,LeanBroth,direct + functional,-,"-",-
+SR-GS-018,Rocket turnaround,LeanBroth,direct + functional,-,"FAILS - 1241.5 s vs 1200 s limit (""LeanBroth rocket turnaround - regression baseline"")",FAILS
+SR-GS-019,Rocket refueling,LeanBroth,direct + functional,-,"-",-
+SR-GS-020,Temperature-controlled storage,LeanBroth,direct + functional,-,"-",-
+SR-GS-021,Ingredient storage capacity,LeanBroth,direct + functional,-,"""LeanBroth storage endurance""",verified
+SR-GS-022,Cooking capacity,LeanBroth,functional,-,"-",-
+SR-GS-023,Internal transfer time,LeanBroth,functional,-,"-",-
+SR-GS-024,Internal transport automation,LeanBroth,functional,-,"-",-
+SR-GS-025,Startup readiness,LeanBroth,functional,-,"-",-
+SR-GS-026,Fault-induced throughput degredation,LeanBroth,functional,-,"FAILS - single-string collapse, 0% retention (""LeanBroth worst fault - regression baseline"")",FAILS
+SR-GS-027,Production coordination,LeanBroth,functional,-,"-",-
+SR-GS-028,Preparation zone,LeanBroth,functional,-,"-",-
+SR-GS-001,Recipe count,EverSimmer,functional,-,"""EverSimmer recipe rotation""",verified
+SR-GS-002,Throughput,EverSimmer,functional,PASS,"""EverSimmer nominal""",verified
+SR-GS-003,Automation level,EverSimmer,functional,PASS,"-",gate PASS
+SR-GS-004,Operator count,EverSimmer,functional,PASS,"-",gate PASS
+SR-GS-005,Shipping manifest,EverSimmer,functional,-,"-",-
+SR-GS-006,Transport loading time,EverSimmer,functional,-,"""EverSimmer transport loading""",verified
+SR-GS-007,Contamination detection,EverSimmer,direct + functional,-,"""EverSimmer contamination 2 percent""",verified
+SR-GS-008,Serving temperature,EverSimmer,direct + functional,-,"""EverSimmer nominal""",verified
+SR-GS-009,Container seal life,EverSimmer,direct + functional,-,"-",-
+SR-GS-010,Inventory accuracy,EverSimmer,functional,-,"-",-
+SR-GS-011,Mass budget,EverSimmer,direct,PASS,"-",gate PASS
+SR-GS-012,Power budget,EverSimmer,direct,PASS,"-",gate PASS
+SR-GS-013,Cost budget,EverSimmer,direct,PASS,"-",gate PASS
+SR-GS-014,Volume budget,EverSimmer,direct,PASS,"-",gate PASS
+SR-GS-015,Gravity operating range,EverSimmer,direct + functional,PASS,"FAILS at 0.1 g - 189.3 bph vs 200 floor (""EverSimmer at 0.1 g - regression baseline""; ADR-026)",FAILS
+SR-GS-016,Structural 12 g tolerance,EverSimmer,direct + functional,-,"-",-
+SR-GS-017,Concurrent rocket support,EverSimmer,direct + functional,-,"-",-
+SR-GS-018,Rocket turnaround,EverSimmer,direct + functional,-,"""EverSimmer rocket turnaround""",verified
+SR-GS-019,Rocket refueling,EverSimmer,direct + functional,-,"-",-
+SR-GS-020,Temperature-controlled storage,EverSimmer,direct + functional,-,"-",-
+SR-GS-021,Ingredient storage capacity,EverSimmer,direct + functional,-,"""EverSimmer storage endurance""",verified
+SR-GS-022,Cooking capacity,EverSimmer,functional,-,"-",-
+SR-GS-023,Internal transfer time,EverSimmer,functional,-,"-",-
+SR-GS-024,Internal transport automation,EverSimmer,functional,-,"-",-
+SR-GS-025,Startup readiness,EverSimmer,functional,-,"""EverSimmer nominal""",verified
+SR-GS-026,Fault-induced throughput degredation,EverSimmer,functional,-,"""EverSimmer worst fault""",verified
+SR-GS-027,Production coordination,EverSimmer,functional,-,"-",-
+SR-GS-028,Preparation zone,EverSimmer,functional,-,"-",-

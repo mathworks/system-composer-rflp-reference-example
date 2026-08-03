@@ -4,6 +4,8 @@ Methodology: [`05_trade_study_methodology.md`](05_trade_study_methodology.md). S
 
 The trade study has been run. This document reports the full results and the recommendation that follows from them.
 
+*Note: the embedded figure files track the live analysis pipeline (regenerated on every full run — currently behavioral-era numbers in the dark house theme), while the tables in this document record the static-era values as of the original study. Where they differ, the tables are the as-of-then record.*
+
 ## 1. Rolled-up metrics and budget utilization
 
 | Metric | HyperCook (A) | LeanBroth (B) | EverSimmer (C) | SR cap |

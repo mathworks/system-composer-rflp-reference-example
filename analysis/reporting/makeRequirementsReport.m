@@ -6,6 +6,11 @@ function makeRequirementsReport()
 %   verification status (Verify links from the Simulink Test simulation
 %   cases, colored by the latest results), and the link listings per
 %   requirement. Run after runAllTests so verification results are fresh.
+%
+%   NOTE (ADR-035): the status columns here are ANY-VARIANT aggregates -
+%   slreq rolls status up over all loaded link sets and cannot scope to
+%   one candidate architecture. The per-variant view for design review
+%   is makeVariantTraceMatrix (docs/deliverables/variantRequirementsTraces).
 
 proj = currentProject;
 reqDir = char(fullfile(proj.RootFolder, 'requirements'));

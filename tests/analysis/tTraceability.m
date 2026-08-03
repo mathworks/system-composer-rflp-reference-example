@@ -6,7 +6,11 @@ classdef (TestTags = {'traceability'}) tTraceability < sltest.TestCase
 
     properties (TestParameter)
         % counts include the 4 root-architecture Implement links per model
-        % for the emergent budget SRs, SR-GS-011..014 (ADR-024)
+        % for the emergent budget SRs, SR-GS-011..014 (ADR-024). All three
+        % candidate architectures carry Implement links symmetrically
+        % (ADR-035): no variant is committed as baseline, so each variant's
+        % trace must stand on its own; per-variant attribution happens at
+        % reporting time, not by demoting link types.
         linkSet = struct( ...
             'HyperCook',  struct('mdl','PhysicalHyperCook',  'n',14), ...
             'LeanBroth',  struct('mdl','PhysicalLeanBroth',  'n',14), ...
@@ -38,6 +42,10 @@ classdef (TestTags = {'traceability'}) tTraceability < sltest.TestCase
                 dst = slreq.structToObj(destination(L));
                 testCase.verifyMatches(dst.Id, '^SR-GS-\d+$');
             end
+            types = arrayfun(@(L) string(L.Type), links);
+            testCase.verifyTrue(all(types == "Implement"), sprintf( ...
+                '%s: all candidate architectures carry Implement links (ADR-035)', ...
+                linkSet.mdl));
         end
 
         function allocationSets(testCase)

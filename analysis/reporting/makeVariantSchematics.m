@@ -12,13 +12,14 @@ function makeVariantSchematics()
 proj = currentProject;
 figDir = char(fullfile(proj.RootFolder, 'docs', 'figures'));
 
-surf_ = [252 252 251]/255;
-inkP  = [11 11 11]/255;
-inkS  = [82 81 78]/255;
-gray_ = [178 176 172]/255;
+th = gsPlotTheme();   % dark house style; variant colors by name
+surf_ = th.surface;
+inkP  = th.inkP;
+inkS  = th.inkS;
+gray_ = th.muted;     % single-string/shared infrastructure
 
 % --- HyperCook: blue, parallel everywhere until it isn't -------------
-c = [42 120 214]/255;
+c = th.palette('HyperCook');
 f = newCanvas(surf_);
 flowArrow(2, 17, 7, inkS); text(2, 20.5, 'supply', 'FontSize', 9, 'Color', inkS);
 stack(10, 17, 2, 'Storage', c, inkP);           % 2 stores
@@ -34,7 +35,7 @@ exportgraphics(f, fullfile(figDir,'variant_schematic_hypercook.png'), 'Resolutio
 close(f);
 
 % --- LeanBroth: aqua, minimal everything -----------------------------
-c = [27 175 122]/255;
+c = th.palette('LeanBroth');
 f = newCanvas(surf_);
 flowArrow(2, 17, 7, inkS); text(2, 20.5, 'supply', 'FontSize', 9, 'Color', inkS);
 stack(10, 17, 2, 'Storage', c, inkP);
@@ -50,7 +51,7 @@ exportgraphics(f, fullfile(figDir,'variant_schematic_leanbroth.png'), 'Resolutio
 close(f);
 
 % --- EverSimmer: yellow, three independent cells ---------------------
-c = [237 161 0]/255;
+c = th.palette('EverSimmer');
 f = newCanvas(surf_);
 flowArrow(2, 17, 7, inkS); text(2, 20.5, 'supply', 'FontSize', 9, 'Color', inkS);
 onebox(10, 17, 'Store', c, inkP);
@@ -82,7 +83,10 @@ set(ax,'Color',surf_);
 end
 
 function t = tint(col, k)
-t = 1 - (1 - col) * k;   % light tint of col (k = strength)
+% blend col toward the chart surface (k = strength of col); on the dark
+% surface this shades the fill down instead of washing it toward white
+th = gsPlotTheme();
+t = th.surface + (col - th.surface) * k;
 end
 
 function onebox(x, yMid, label, col, ink, note)
@@ -92,8 +96,9 @@ rectangle('Position',[x yMid-h/2 w h], 'Curvature',0.18, ...
 text(x+w/2, yMid, label, 'HorizontalAlignment','center', ...
     'FontSize',9.5, 'Color',ink);
 if nargin > 5
+    thn = gsPlotTheme();
     text(x+w/2, yMid-h/2-2.2, note, 'HorizontalAlignment','center', ...
-        'FontSize',8, 'Color',[0.55 0.53 0.5], 'FontAngle','italic');
+        'FontSize',8, 'Color',thn.muted, 'FontAngle','italic');
 end
 end
 

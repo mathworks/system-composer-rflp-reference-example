@@ -55,18 +55,17 @@ T = addvars(T, MULT', 'Before', 1, 'NewVariableNames', 'RateMultiplier');
 writetable(T, fullfile(anaDir, 'transportSweep.csv'));
 
 % ---- figure ----
-palette = containers.Map({'HyperCook','LeanBroth','EverSimmer'}, ...
-    {[42 120 214]/255, [27 175 122]/255, [237 161 0]/255});
-surf_ = [252 252 251]/255; inkP = [11 11 11]/255; inkS = [82 81 78]/255;
-gridC = [0.88 0.88 0.87];
+th = gsPlotTheme();   % dark house style; colors by variant name
+palette = th.palette;
+surf_ = th.surface; inkP = th.inkP; inkS = th.inkS; gridC = th.grid;
 f = figure('Visible','off','Color',surf_,'Position',[100 100 900 400]);
 ax = axes(f); hold(ax,'on');
 for v = 1:nV
     c = palette(models{v,1});
     plot(ax, MULT*100, lat(v,:)/60, '-o', 'Color', c, 'LineWidth', 2, ...
-        'MarkerFaceColor', c, 'MarkerSize', 5);
+        'MarkerFaceColor', c, 'MarkerEdgeColor', surf_, 'MarkerSize', 6);
 end
-yline(ax, LIMIT_S/60, '--', 'SR-GS-006 limit (10 min)', 'Color', [0.35 0.35 0.35], ...
+yline(ax, LIMIT_S/60, '--', 'SR-GS-006 limit (10 min)', 'Color', th.limit, ...
     'LineWidth', 1.2, 'FontSize', 9, 'LabelHorizontalAlignment','left');
 set(ax,'YScale','log','YGrid','on','GridColor',gridC,'GridAlpha',1,'Box','off', ...
     'Color',surf_,'XColor',inkS,'YColor',inkS,'FontSize',10,'XDir','reverse');

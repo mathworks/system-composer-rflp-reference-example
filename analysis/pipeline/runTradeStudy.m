@@ -26,9 +26,9 @@ caps = S.caps;
 
 % Fixed per-variant palette assigned by NAME, not position, so an excluded
 % variant never repaints the survivors (color follows the entity).
-palette = containers.Map( ...
-    {'HyperCook','LeanBroth','EverSimmer'}, ...
-    {[42 120 214]/255, [27 175 122]/255, [237 161 0]/255});
+% Theme tokens live in gsPlotTheme (dark house style).
+th = gsPlotTheme();
+palette = th.palette;
 
 if nargin > 0 && ~isempty(includeVariants)
     keep = ismember({R.Variant}, includeVariants);
@@ -105,10 +105,7 @@ writetable(Tmc, fullfile(anaDir, 'mcWinShare.csv'));
 % Per-variant colors resolved by name from the fixed palette
 cols = zeros(nV, 3);
 for v = 1:nV, cols(v,:) = palette(vnames{v}); end
-surf_ = [252 252 251] / 255;
-inkP = [11 11 11] / 255;
-inkS = [82 81 78] / 255;
-gridC = [0.88 0.88 0.87];
+surf_ = th.surface; inkP = th.inkP; inkS = th.inkS; gridC = th.grid;
 
 % --- Fig 1: budget utilization (% of SR cap) ---
 f = figure('Visible','off','Color',surf_,'Position',[100 100 860 420]);
@@ -120,8 +117,9 @@ for v = 1:nV
 end
 b = bar(ax, util', 0.72, 'grouped', 'EdgeColor', surf_, 'LineWidth', 1.5);
 for v = 1:nV, b(v).FaceColor = cols(v,:); end
-yline(ax, 100, '-', 'SR cap', 'Color', [0.35 0.35 0.35], 'LineWidth', 1, ...
-    'LabelHorizontalAlignment','left', 'FontSize', 9);
+yline(ax, 100, '-', 'SR cap', 'Color', th.limit, 'LineWidth', 1, ...
+    'LabelHorizontalAlignment','right', 'LabelVerticalAlignment','bottom', ...
+    'FontSize', 9);
 for v = 1:nV
     xt = b(v).XEndPoints;
     text(ax, xt, util(v,:) + 2.5, compose('%.0f', util(v,:)), ...

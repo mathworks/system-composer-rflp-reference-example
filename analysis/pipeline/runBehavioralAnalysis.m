@@ -86,16 +86,16 @@ save(fullfile(anaDir, 'behavioralMetrics.mat'), 'beh');
 writetable(struct2table(beh), fullfile(anaDir, 'behavioralMetrics.csv'));
 
 % ===================== Trace figures =====================
-cols = [42 120 214; 27 175 122; 237 161 0] / 255;   % HC blue, LB aqua, ES yellow
-surf_ = [252 252 251] / 255; inkP = [11 11 11]/255; inkS = [82 81 78]/255;
-gridC = [0.88 0.88 0.87];
+th = gsPlotTheme();   % dark house style; series by fixed variant order
+cols = th.series;
+surf_ = th.surface; inkP = th.inkP; inkS = th.inkS; gridC = th.grid;
 
 f = figure('Visible','off','Color',surf_,'Position',[100 100 900 400]);
 ax = axes(f); hold(ax,'on');
 for v = 1:3
     plot(ax, traces(v).nomT, movmean(traces(v).nomY, 25), 'Color', cols(v,:), 'LineWidth', 2);
 end
-yline(ax, 200, '--', 'SR-GS-002 floor (200 bph)', 'Color', [0.35 0.35 0.35], ...
+yline(ax, 200, '--', 'SR-GS-002 floor (200 bph)', 'Color', th.limit, ...
     'LineWidth', 1, 'FontSize', 9, 'LabelHorizontalAlignment','left');
 set(ax,'YGrid','on','GridColor',gridC,'GridAlpha',1,'Box','off','Color',surf_, ...
     'XColor',inkS,'YColor',inkS,'FontSize',10);
@@ -111,9 +111,9 @@ ax = axes(f); hold(ax,'on');
 for v = 1:3
     plot(ax, traces(v).fltT, movmean(traces(v).fltY, 25), 'Color', cols(v,:), 'LineWidth', 2);
 end
-xline(ax, 2, ':', 'worst-case fault injected', 'Color', [0.35 0.35 0.35], ...
+xline(ax, 2, ':', 'worst-case fault injected', 'Color', th.muted, ...
     'LineWidth', 1.2, 'FontSize', 9);
-yline(ax, 200, '--', 'SR floor', 'Color', [0.35 0.35 0.35], 'LineWidth', 1, 'FontSize', 9);
+yline(ax, 200, '--', 'SR floor', 'Color', th.limit, 'LineWidth', 1, 'FontSize', 9);
 set(ax,'YGrid','on','GridColor',gridC,'GridAlpha',1,'Box','off','Color',surf_, ...
     'XColor',inkS,'YColor',inkS,'FontSize',10);
 xlabel(ax,'Time (h)','Color',inkP); ylabel(ax,'Packaged throughput (bph, smoothed)','Color',inkP);

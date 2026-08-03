@@ -68,19 +68,22 @@ end
 writetable(T, fullfile(anaDir, 'contaminationSweep.csv'));
 
 % ---- figure ----
-palette = containers.Map({'HyperCook','LeanBroth','EverSimmer'}, ...
-    {[42 120 214]/255, [27 175 122]/255, [237 161 0]/255});
-surf_ = [252 252 251]/255; inkP = [11 11 11]/255; inkS = [82 81 78]/255;
-gridC = [0.88 0.88 0.87];
+th = gsPlotTheme();   % dark house style; colors by variant name
+palette = th.palette;
+surf_ = th.surface; inkP = th.inkP; inkS = th.inkS; gridC = th.grid;
 f = figure('Visible','off','Color',surf_,'Position',[100 100 900 400]);
 ax = axes(f); hold(ax,'on');
 for v = 1:nV
     c = palette(models{v,1});
     plot(ax, INC*100, sens(v,:)*100, '-o', 'Color', c, 'LineWidth', 2, ...
-        'MarkerFaceColor', c, 'MarkerSize', 5);
+        'MarkerFaceColor', c, 'MarkerEdgeColor', surf_, 'MarkerSize', 6);
 end
-yline(ax, 99, '--', 'SR-GS-007 floor (99%)', 'Color', [0.35 0.35 0.35], ...
+yline(ax, 99, '--', 'SR-GS-007 floor (99%)', 'Color', th.limit, ...
     'LineWidth', 1.2, 'FontSize', 9, 'LabelHorizontalAlignment','left');
+% all three variants share the 0.995 design sensitivity, so the three
+% lines coincide exactly - say so, or the chart reads as one series
+text(ax, 2.75, 99.56, 'all three variants coincide (0.995 design sensitivity)', ...
+    'Color', inkS, 'FontSize', 9, 'HorizontalAlignment','center');
 set(ax,'YGrid','on','GridColor',gridC,'GridAlpha',1,'Box','off','Color',surf_, ...
     'XColor',inkS,'YColor',inkS,'FontSize',10);
 ylim(ax, [98.5 100]);

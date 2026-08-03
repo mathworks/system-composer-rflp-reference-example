@@ -3,23 +3,30 @@ function buildSystemTestFile()
 %   Creates tests/system/GalacticSoupSystemTests.mldatx (ADR-022): two suites of
 %   simulation test cases on the three physical architecture models.
 %
+%   Verify-link semantics (ADR-022, per-variant per ADR-035): a Verify
+%   link attaches wherever a passing case means THAT VARIANT genuinely
+%   meets the requirement. No variant is committed as baseline: all
+%   three candidate architectures carry their own evidence, and
+%   per-variant attribution (which variant's cases verify which SRs)
+%   is done at reporting time from the case names - see the runAllTests
+%   per-variant coverage table and makeVariantTraceMatrix. Cases named
+%   "- regression baseline" pin a number that does NOT satisfy the
+%   requirement (or has none to satisfy) and stay unlinked.
+%
 %   Nominal suite - steady throughput and plant mode via custom criteria:
-%     HC/ES cases verify the SR-GS-002 floor AND record the regression baseline,
-%     and carry Verify links to SR-GS-002 so verification status rolls up
-%     in the Requirements Editor (the capability MATLAB Test lacks).
-%     The LB case is a regression baseline only (196.8 bph band) - LeanBroth
-%     genuinely fails the floor, and that story belongs to the compliance
-%     gate, not to a Verify link that would assert the opposite.
+%     HC/ES verify SR-GS-002 (floor) and SR-GS-025 (first packaged
+%     output within the 3600 s startup period); ES additionally verifies
+%     SR-GS-008 (vat serves from the simmer band, never exceeding 95 C).
+%     LB genuinely fails the floor (196.8 bph) - baselined unlinked;
+%     that story belongs to the compliance gate.
 %   WorstFault suite - Fault_T_* parameter overrides at t = 7200 s:
-%     ES verifies SR-GS-026 (retention ~2/3, Degraded mode) with a Verify
-%     link; HC/LB baseline their 0% collapse as unlinked regression cases.
+%     ES verifies SR-GS-026 (retention ~2/3, Degraded mode); HC/LB
+%     baseline their 0% collapse unlinked.
 %   GravityExtremes suite - Gravity_g overrides at the SR-GS-015 range
-%     ends (0.1 g / 12 g): HyperCook verifies SR-GS-015 (only variant
-%     holding the floor across the range); EverSimmer's 0.1 g case
-%     baselines its microgravity shortfall unlinked (ADR-026).
-%   Nominal criteria additionally verify SR-GS-025 (first packaged output
-%   within the 3600 s startup period, HC/ES) and SR-GS-008 (EverSimmer
-%   vat serves from the simmer band, never exceeding 95 C).
+%     ends (0.1 g / 12 g): HyperCook holds the floor across the range
+%     and verifies SR-GS-015; EverSimmer fails at 0.1 g (189.3 bph,
+%     ADR-026 - the pump-assisted drain redesign case) and its 0.1 g
+%     case is baselined unlinked.
 %
 %   Destructive and idempotent: recreates the file and re-links, purging
 %   stale Verify links to this artifact from the requirement set first.
@@ -119,9 +126,11 @@ end
 % --- Gravity suite: SR-GS-015 extremes (0.1 g and 12 g) ---
 % Only HyperCook holds the floor across the whole range (see
 % analysis/sweeps/runGravitySweep): its pumped continuous lines are
-% gravity-insensitive. EverSimmer's batch vats drain at sqrt(g) and it
-% falls to ~189 bph at 0.1 g - baselined, unlinked, and flagged as the
-% microgravity redesign case (pump-assisted drains).
+% gravity-insensitive, so its cases verify SR-GS-015 FOR HYPERCOOK.
+% EverSimmer's batch vats drain at sqrt(g) and fall to ~189 bph at
+% 0.1 g - baselined, unlinked, and flagged as the microgravity redesign
+% case (pump-assisted drains, ADR-026). Per-variant reporting keeps
+% this honest: HyperCook's pass never paints EverSimmer's trace green.
 gravSuite = createTestSuite(tf, 'GravityExtremes');
 for stray = getTestCases(gravSuite)
     remove(stray);
