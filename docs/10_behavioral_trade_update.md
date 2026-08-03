@@ -2,6 +2,8 @@
 
 Behavioral models: [`09_behavioral_models.md`](09_behavioral_models.md). Source data: [`../behavior/`](../behavior/) (component library, tests) instantiated inline inside [`../architecture/`](../architecture/)'s three physical variant models, produced by `runBehavioralAnalysis.m`. Decisions: ADR-018 and ADR-020 in [`07_decision_log.md`](07_decision_log.md). Baseline static results this update supersedes: [`06_trade_study_results.md`](06_trade_study_results.md).
 
+*Note: §3-§4 record the gate-excluded, two-variant MCDA as of this update. The committed [`../analysis/results/complianceGate.csv`](../analysis/results/complianceGate.csv), [`../analysis/results/tradeScores.csv`](../analysis/results/tradeScores.csv), and [`../analysis/results/mcWinShare.csv`](../analysis/results/mcWinShare.csv) now report and score all three candidates side by side, no variant committed as baseline (ADR-035). Where they differ, the CSVs are the current record and the tables here are the as-of-then one; §3 and §4 carry both.*
+
 ## 1. What changed
 
 `runVariantAnalysis.m` now accepts simulated throughput and worst-case single-fault retention from `runBehavioralAnalysis.m` in place of the hand-authored static stage-table values, for those two metrics only — every other rolled-up quantity (mass, power, cost, volume, automation, operators, gravity rating) is unchanged, and the static values are retained alongside the new ones (`Static_Throughput_bph`, `Static_N1Retention`, etc.) for direct comparison rather than being overwritten.
@@ -42,7 +44,7 @@ A supervisory-telemetry limitation surfaces in this pass: `plantMode` (the new `
 
 ## 3. LeanBroth formally fails SR-GS-002
 
-**LeanBroth's simulated steady throughput, 196.8 bph, is below the 200 bph SR-GS-002 floor.** The formal Requirements Table gate ([`08_formal_compliance_gate.md`](08_formal_compliance_gate.md)) flags exactly the Throughput row for LeanBroth and no other row, for any variant — 23 of 24 formal/procedural cross-checks pass, and the one disagreement is a genuine compliance failure rather than a formal/procedural drift (the procedural `OK_Throughput` flag agrees with the formal verdict; both say fail).
+**LeanBroth's simulated steady throughput, 196.8 bph, is below the 200 bph SR-GS-002 floor.** The formal Requirements Table gate ([`08_formal_compliance_gate.md`](08_formal_compliance_gate.md)) flags exactly the Throughput row for LeanBroth and no other row, for any variant — 23 of 24 formal/procedural cross-checks pass, and the one disagreement is a genuine compliance failure rather than a formal/procedural drift (the procedural `OK_Throughput` flag agrees with the formal verdict; both say fail). Since this update the gate has picked up two more failing cells: the committed [`../analysis/results/complianceGate.csv`](../analysis/results/complianceGate.csv) records 21 of 24 passing, adding HyperCook's Cost and Volume rows (2,061.2 kCr against the 2,000 kCr SR-GS-013 cap, 417.3 m³ against the 400 m³ SR-GS-014 cap) once the storage racks sized by ADR-032 landed in the roll-up. The formal and procedural paths still agree on every cell.
 
 LeanBroth's static throughput margin was only +5% (210 vs. 200 bph — already the tightest margin of any variant on any gate, flagged as a caveat in [`06_trade_study_results.md`](06_trade_study_results.md) §7 item 3 for automation, and true of throughput too). That 5% margin is exactly the kind of headroom the QC reject fraction and calibration downtime were sized to consume: 3% manual-QC reject plus roughly 4.2% calibration downtime on LeanBroth's single QC bench account for essentially all of the shortfall.
 
@@ -65,6 +67,17 @@ Monte Carlo weight sensitivity (5,000 Dirichlet draws, `rng(42)`, reproducible):
 
 EverSimmer now wins **all four** named scenarios, including CostLean — where LeanBroth won at baseline (§5 of [`06_trade_study_results.md`](06_trade_study_results.md)) and where EverSimmer placed second to LeanBroth by a wide margin. With only two variants left, min-max normalization is binary per criterion (whichever variant is better on a criterion scores 1, the other scores 0), so the scenario scores above compress to whichever side of 0.5 the scenario's weights fall on and carry less nuance than the three-variant baseline scores. The Monte Carlo win share and the "wins every scenario" pattern are the informative results here, not the individual score magnitudes.
 
+**Current record.** The gate exclusion above is no longer how the committed artifacts are produced. Under ADR-035 no variant is committed as baseline, all three candidates keep their evidence, and the trade study scores all three so each result can be read on its own terms — [`../analysis/results/tradeScores.csv`](../analysis/results/tradeScores.csv):
+
+| Scenario | HyperCook | LeanBroth | EverSimmer | Winner |
+|---|---|---|---|---|
+| Balanced | 0.342 | 0.347 | 0.682 | EverSimmer |
+| ThroughputFirst | 0.467 | 0.297 | 0.602 | EverSimmer |
+| CostLean | 0.196 | 0.615 | 0.525 | LeanBroth |
+| MissionAssurance | 0.242 | 0.312 | 0.819 | EverSimmer |
+
+Monte Carlo weight sensitivity over the same 5,000 draws ([`../analysis/results/mcWinShare.csv`](../analysis/results/mcWinShare.csv)): **EverSimmer 85.2%, LeanBroth 10.3%, HyperCook 4.5%**. So EverSimmer wins three of the four named scenarios rather than all four: LeanBroth takes CostLean at 0.615, as it did at the static baseline ([`06_trade_study_results.md`](06_trade_study_results.md) §4), and with three variants back in the normalization the scores recover the spread the two-variant run compressed. This does not retract §3 — LeanBroth is scored here but still fails SR-GS-002, so its CostLean win is a descope option to weigh against that failure, not a compliant recommendation.
+
 ## 5. Figures
 
 ![Simulated nominal throughput](figures/behavioral_throughput.png)
@@ -75,7 +88,7 @@ EverSimmer now wins **all four** named scenarios, including CostLean — where L
 
 ## 6. Recommendation
 
-**ADR-009 (EverSimmer as baseline) is reinforced, not revised.** The resilience advantage that the static roll-up could only assert as a stereotype-derived percentage (66.7% N-1 retention) is now demonstrated dynamically: fault injection produces the graceful two-thirds step-down and Degraded-mode transition in §5, not merely an arithmetic capacity number. EverSimmer's energy per bowl (1.212 kWh) lands in the middle of the field, between LeanBroth's more efficient batch process (0.814 kWh) and HyperCook's continuous-line draw (1.554 kWh) — a new data point the static analysis had no mechanism to produce, since it never modeled actual power draw against actual throughput.
+**The behavioral evidence reinforces EverSimmer on the merits, but ADR-009 is no longer treated as settled** — ADR-035 reopened the selection for renewed team review, and no variant is committed as baseline in the artifacts. The resilience advantage that the static roll-up could only assert as a stereotype-derived percentage (66.7% N-1 retention) is now demonstrated dynamically: fault injection produces the graceful two-thirds step-down and Degraded-mode transition in §5, not merely an arithmetic capacity number. EverSimmer's energy per bowl (1.212 kWh) lands in the middle of the field, between LeanBroth's more efficient batch process (0.814 kWh) and HyperCook's continuous-line draw (1.554 kWh) — a new data point the static analysis had no mechanism to produce, since it never modeled actual power draw against actual throughput.
 
 Cold start is a genuinely new operational consideration this update surfaces: EverSimmer and LeanBroth both take on the order of an hour to reach steady output from a cold hopper, while HyperCook is at steady output in 119 s. This favors HyperCook specifically for surge-restart scenarios (e.g., recovering from a planned full-plant shutdown under time pressure) even though it does not change the overall recommendation.
 

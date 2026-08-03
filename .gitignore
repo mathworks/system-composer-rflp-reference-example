@@ -35,6 +35,9 @@ codegen/
 # buildtool cache folder
 .buildtool/
 
+# MATLAB project derived artifacts (dependency analysis cache)
+derived/
+
 # SimBiology backup files
 *.sbproj.backup
 *.sbproj.bak
