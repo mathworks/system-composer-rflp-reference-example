@@ -107,11 +107,22 @@ Each physical model groups its components into **bays** — one layer of hierarc
 | `PlantServices` | fusion plant, gravity compensation, conveyors | fission reactor, gravity compensation, AGV pool | reactor pair, gravity mesh, transport swarm |
 | controller (at root) | `CentralControlComputer` | `OpsConsole` | `ControlTriad` |
 
-Bay membership is a **readability grouping, not a design change**: it moved no component, added none, and left every stereotype value, requirement link, and allocation intact, so the rolled-up metrics are unchanged. The bays carry the `PhysicalProperties` stereotype only so the roll-up can sum through them. The plant controller stays at the model root because every bay talks to it; nesting it would hide the control topology rather than clarify it.
+The bay grouping itself was a **readability change, not a design change**: it moved no component, added none, and left every stereotype value, requirement link, and allocation intact, so the rolled-up metrics were unchanged (ADR-036). The bays carry the `PhysicalProperties` stereotype only so the roll-up can sum through them.
 
-Both steps are re-runnable: [`architecture/build/regroupPhysicalBays.m`](../architecture/build/regroupPhysicalBays.m) for the grouping and [`architecture/build/layoutPhysicalBays.m`](../architecture/build/layoutPhysicalBays.m) for the layout. **Re-running `arrangeSystem` on these models discards the process-order placement** — `layoutPhysicalBays` has to be re-run to restore it.
+### Bay status concentrators
 
-One thing the bays do **not** fix: each plant controller still carries one status input port per unit (19 / 16 / 13), and those lines still dominate the lower half of each root diagram. Collapsing them needs a per-bay status aggregator — a real component with mass, power, and cost, which is exactly what EverSimmer's `CellController` is — so it would move the metrics and re-open the trade study. See ADR-036 for that decision and for the remaining duplicate `directive` boundary ports.
+Each bay then gained a **status concentrator** (ADR-037) — `IntakeController`, `CookController`, `LaunchController` and so on. It receives the plant directive once and fans it out to the bay's members, and rolls the members' status into a single `bayStatus`. Plant controller inputs drop from one per unit to one per bay:
+
+| | HyperCook | LeanBroth | EverSimmer |
+|---|---|---|---|
+| Controller inputs | 19 → **9** | 16 → **7** | 13 → **9** |
+| Concentrators added | 6 | 4 | 3 |
+
+Unlike the grouping, this **is** a design change and it moves the numbers — a concentrator is real hardware (15 kg / 0.4 kW / 6 kCredits / 0.15 m³ each). Simulated throughput and fault retention are unchanged to five significant figures, but mass, cost, volume and power all rise, availability falls slightly (a concentrator is a single point of failure for its bay), and **HyperCook loses its power gate**: it sat at 498.0 kW of a 500 kW cap and six concentrators put it at 500.4. The formal gate reads 20/24 rather than 21/24. EverSimmer absorbs its three with 14.6 kCredits of cost margin left and is still the only compliant variant, so the selection is unchanged. Sizing is load-bearing: above roughly **10.8 kCredits per concentrator** EverSimmer also fails cost and the compliant set goes empty.
+
+The plant controller stays at the model root because every bay talks to it; nesting it would hide the control topology rather than clarify it.
+
+All three steps are re-runnable, in order: [`regroupPhysicalBays`](../architecture/build/regroupPhysicalBays.m), [`addStatusAggregators`](../architecture/build/addStatusAggregators.m), then `buildInlineBehaviors` per variant for the concentrator behaviours, and [`layoutPhysicalBays`](../architecture/build/layoutPhysicalBays.m) last. **Re-running `arrangeSystem` on these models discards the process-order placement** — `layoutPhysicalBays` has to be re-run to restore it.
 
 ## 6. Trade study
 

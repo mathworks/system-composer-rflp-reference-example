@@ -190,35 +190,36 @@ makeOuts(p,'manifest','ShippingManifestMsg', {'destinationId','0';'batchId','0';
 stubStatus(p,'statusDispatch', '18', '1');
 
 % --- OpsConsole: supervisor + telemetry aggregation ---
+% --- bay concentrators (ADR-037) ---
+buildAggregator(mdlA, mdl, 'IntakeController', ...
+    {'statusReceive','statusColdStore','statusDryStore'});
+buildAggregator(mdlA, mdl, 'LineController', ...
+    {'statusCook1','statusCook2','statusPrep','statusQA','statusPack'});
+buildAggregator(mdlA, mdl, 'LaunchController', ...
+    {'statusDispatch','statusFleet','statusRefuel'});
+buildAggregator(mdlA, mdl, 'ServicesController', {'statusPower','statusTransport'});
+
+% --- plant controller: one status input per bay, not per unit ---
 p = beh(mdlA, cpath(mdl,'OpsConsole'));
-inEl(p,'statusCook1','health');
-inEl(p,'statusCook2','health');
-addInEl(p,'statusCook1','power_kW','Cook1Pwr');
-addInEl(p,'statusCook2','power_kW','Cook2Pwr');
-powerPorts = {'statusFleet','statusDispatch','statusPower','statusQA','statusReceive', ...
-              'statusPack','statusDryStore','statusTransport','statusPrep','statusRefuel','statusColdStore'};
+lbBays = {'bayStatusIntake','bayStatusLine','bayStatusLaunch','bayStatusServices'};
 pw = {};
-for q = powerPorts
+for q = lbBays
     pw{end+1} = addInEl(p, q{1}, 'power_kW', [q{1} 'Pwr']); %#ok<AGROW>
 end
-mx = addB(p,'HealthMux','simulink/Signal Routing/Mux',{'Inputs','4'});
-one = addB(p,'One','simulink/Sources/Constant',{'Value','1'});
-% explicit canonical names: blkOf is ambiguous once extra element readers
-% (Cook1Pwr etc.) exist on the same port
-line(p, 'in_statusCook1', mx);
-lineTo(p, 'in_statusCook2/1', [mx '/2']);
-lineTo(p, [one '/1'], [mx '/3']); lineTo(p, [one '/1'], [mx '/4']);
-dyn = addB(p,'DynPower','simulink/Math Operations/Add',{'Inputs','++'});
-lineTo(p, ['Cook1Pwr' '/1'], [dyn '/1']); lineTo(p, ['Cook2Pwr' '/1'], [dyn '/2']);
+% The production line's health vector leads with the two kettles, which is
+% the order LB_NumLines counts, so it feeds the supervisor directly.
+% Explicit reader name: blkOf would return the power reader created above.
+lh = addInEl(p, 'bayStatusLine', 'lineHealth', 'LineHealthVec');
 sup = addRef(p,'Supervisor','BehSupervisor', {'NumLines','LB_NumLines'});
-line(p, mx, sup); lineTo(p, [dyn '/1'], [sup '/2']);
-% total power: dynamic + all reported static + unreported units (console 2, grav 30, barcode 1)
+lineTo(p, [lh '/1'], [sup '/1']);
+lineTo(p, 'bayStatusLinePwr/1', [sup '/2']);
+% total power: bay-reported + unreported units (console 2, grav 30, barcode 1)
+% plus the four concentrators' own 0.4 kW each
 tot = addB(p,'TotalPower','simulink/Math Operations/Add', ...
-    {'Inputs', repmat('+',1,numel(pw)+2)});
-lineTo(p, [dyn '/1'], [tot '/1']);
-for q = 1:numel(pw), lineTo(p, [pw{q} '/1'], sprintf('%s/%d', tot, q+1)); end
-oth = addB(p,'UnreportedPower','simulink/Sources/Constant',{'Value','33'});
-lineTo(p, [oth '/1'], sprintf('%s/%d', tot, numel(pw)+2));
+    {'Inputs', repmat('+',1,numel(pw)+1)});
+for q = 1:numel(pw), lineTo(p, [pw{q} '/1'], sprintf('%s/%d', tot, q)); end
+oth = addB(p,'UnreportedPower','simulink/Sources/Constant',{'Value','33 + 4*0.4'});
+lineTo(p, [oth '/1'], sprintf('%s/%d', tot, numel(pw)+1));
 touts = makeOuts(p,'telemetry','TelemetryBus', {});
 lineTo(p, [tot '/1'], touts('totalPower_kW'));
 mdtc = addB(p,'ModeDbl','simulink/Signal Attributes/Data Type Conversion',{'OutDataTypeStr','double'});
@@ -399,26 +400,38 @@ dockPath(p, 'in_sealedContainers', outs('flow_bps'), ...
 makeOuts(p,'manifest','ShippingManifestMsg', {'destinationId','0';'batchId','0';'count','0';'mass_kg','0'});
 stubStatus(p,'statusDispatch', '15', '1');
 
+% --- bay concentrators (ADR-037) ---
+buildAggregator(mdlA, mdl, 'IntakeController', ...
+    {'statusReceive','statusColdStore','statusAmbStore'});
+buildAggregator(mdlA, mdl, 'PrepController',   {'statusPrep1','statusPrep2'});
+buildAggregator(mdlA, mdl, 'CookController', ...
+    {'statusCook1','statusCook2','statusCook3','statusCook4'});
+buildAggregator(mdlA, mdl, 'FinishingController', {'statusQA','statusPack'});
+buildAggregator(mdlA, mdl, 'LaunchController', ...
+    {'statusDispatch','statusFleet','statusRefuel'});
+buildAggregator(mdlA, mdl, 'ServicesController', {'statusPower','statusTransport'});
+
+% --- plant controller: one status input per bay, not per unit ---
 p = beh(mdlA, cpath(mdl,'CentralControlComputer'));
-for s = 1:4, inEl(p, sprintf('statusCook%d',s), 'health'); end
-pwDyn = {};
-for s = 1:4, pwDyn{end+1} = addInEl(p, sprintf('statusCook%d',s), 'power_kW', sprintf('Cook%dPwr',s)); end %#ok<AGROW>
-hcPwrPorts = {'statusTransport','statusQA','statusFleet','statusAmbStore','statusPower', ...
-              'statusReceive','statusColdStore','statusRefuel','statusPrep1','statusPrep2', ...
-              'statusPack','statusDispatch'};
+hcBays = {'bayStatusIntake','bayStatusPrep','bayStatusCook', ...
+          'bayStatusFinishing','bayStatusLaunch','bayStatusServices'};
 pw = {};
-for q = hcPwrPorts, pw{end+1} = addInEl(p, q{1}, 'power_kW', [q{1} 'Pwr']); end %#ok<AGROW>
-mx = addB(p,'HealthMux','simulink/Signal Routing/Mux',{'Inputs','4'});
-for s = 1:4, lineTo(p, sprintf('in_statusCook%d/1',s), sprintf('%s/%d',mx,s)); end
-dyn = addB(p,'DynPower','simulink/Math Operations/Add',{'Inputs','++++'});
-for s = 1:4, lineTo(p, [pwDyn{s} '/1'], sprintf('%s/%d',dyn,s)); end
+for q = hcBays, pw{end+1} = addInEl(p, q{1}, 'power_kW', [q{1} 'Pwr']); end %#ok<AGROW>
+% The cook bay's per-line health vector goes straight to the supervisor:
+% it is already the 4-wide signal the old HealthMux assembled by hand.
+% Name the reader explicitly - blkOf returns whichever element reader on
+% the port it finds first, which is the power one created just above, and
+% feeding that scalar to a 4-wide input fails only at diagram update.
+lh = addInEl(p, 'bayStatusCook', 'lineHealth', 'CookLineHealth');
 sup = addRef(p,'Supervisor','BehSupervisor', {'NumLines','HC_NumLines'});
-line(p, mx, sup); lineTo(p, [dyn '/1'], [sup '/2']);
-tot = addB(p,'TotalPower','simulink/Math Operations/Add', {'Inputs', repmat('+',1,numel(pw)+2)});
-lineTo(p, [dyn '/1'], [tot '/1']);
-for q = 1:numel(pw), lineTo(p, [pw{q} '/1'], sprintf('%s/%d', tot, q+1)); end
-oth = addB(p,'UnreportedPower','simulink/Sources/Constant',{'Value','58'});
-lineTo(p, [oth '/1'], sprintf('%s/%d', tot, numel(pw)+2));
+lineTo(p, [lh '/1'], [sup '/1']);
+lineTo(p, 'bayStatusCookPwr/1', [sup '/2']);
+tot = addB(p,'TotalPower','simulink/Math Operations/Add', {'Inputs', repmat('+',1,numel(pw)+1)});
+for q = 1:numel(pw), lineTo(p, [pw{q} '/1'], sprintf('%s/%d', tot, q)); end
+% 58 unreported as before, plus the six concentrators' own 0.4 kW each,
+% which their bayStatus deliberately excludes (see buildAggregator).
+oth = addB(p,'UnreportedPower','simulink/Sources/Constant',{'Value','58 + 6*0.4'});
+lineTo(p, [oth '/1'], sprintf('%s/%d', tot, numel(pw)+1));
 touts = makeOuts(p,'telemetry','TelemetryBus', {});
 lineTo(p, [tot '/1'], touts('totalPower_kW'));
 mdtc = addB(p,'ModeDbl','simulink/Signal Attributes/Data Type Conversion',{'OutDataTypeStr','double'});
@@ -620,14 +633,23 @@ dockPath(p, sm, outs('flow_bps'), 'Transport_Rate_bph/3600', 'Transport_Latency_
 makeOuts(p,'manifest','ShippingManifestMsg', {'destinationId','0';'batchId','0';'count','0';'mass_kg','0'});
 stubStatus(p,'statusDispatch', '12', '1');
 
+% --- bay concentrators (ADR-037) ---
+% EverSimmer's production cells stay at the model root - they already had
+% their own CellControllers - so only the intake, launch and services bays
+% gain a concentrator, and the supervisor's per-cell health path is
+% untouched.
+buildAggregator(mdlA, mdl, 'IntakeController', {'statusReceive','statusStore'});
+buildAggregator(mdlA, mdl, 'LaunchController', ...
+    {'statusDispatch','statusFleet','statusRefuel'});
+buildAggregator(mdlA, mdl, 'ServicesController', {'statusPower','statusTransport'});
+
 p = beh(mdlA, cpath(mdl,'ControlTriad'));
 for s = 1:3, inEl(p, sprintf('statusCell%d',s), 'health'); end
 pwDyn = {};
 for s = 1:3, pwDyn{end+1} = addInEl(p, sprintf('statusCell%d',s), 'power_kW', sprintf('Cell%dPwr',s)); end %#ok<AGROW>
-esPwrPorts = {'statusPower','statusFleet','statusStore','statusDispatch', ...
-              'statusReceive','statusRefuel','statusTransport'};
+esBays = {'bayStatusIntake','bayStatusLaunch','bayStatusServices'};
 pw = {};
-for q = esPwrPorts, pw{end+1} = addInEl(p, q{1}, 'power_kW', [q{1} 'Pwr']); end %#ok<AGROW>
+for q = esBays, pw{end+1} = addInEl(p, q{1}, 'power_kW', [q{1} 'Pwr']); end %#ok<AGROW>
 mx = addB(p,'HealthMux','simulink/Signal Routing/Mux',{'Inputs','4'});
 for s = 1:3, lineTo(p, sprintf('in_statusCell%d/1',s), sprintf('%s/%d',mx,s)); end
 one = addB(p,'One','simulink/Sources/Constant',{'Value','1'});
@@ -636,10 +658,11 @@ dyn = addB(p,'DynPower','simulink/Math Operations/Add',{'Inputs','+++'});
 for s = 1:3, lineTo(p, [pwDyn{s} '/1'], sprintf('%s/%d',dyn,s)); end
 sup = addRef(p,'Supervisor','BehSupervisor', {'NumLines','ES_NumLines'});
 line(p, mx, sup); lineTo(p, [dyn '/1'], [sup '/2']);
+% 66 unreported as before, plus the three concentrators' own 0.4 kW each
 tot = addB(p,'TotalPower','simulink/Math Operations/Add', {'Inputs', repmat('+',1,numel(pw)+2)});
 lineTo(p, [dyn '/1'], [tot '/1']);
 for q = 1:numel(pw), lineTo(p, [pw{q} '/1'], sprintf('%s/%d', tot, q+1)); end
-oth = addB(p,'UnreportedPower','simulink/Sources/Constant',{'Value','66'});
+oth = addB(p,'UnreportedPower','simulink/Sources/Constant',{'Value','66 + 3*0.4'});
 lineTo(p, [oth '/1'], sprintf('%s/%d', tot, numel(pw)+2));
 touts = makeOuts(p,'telemetry','TelemetryBus', {});
 lineTo(p, [tot '/1'], touts('totalPower_kW'));
@@ -736,6 +759,7 @@ canon = struct( ...
   'SoupStream',       {{'batchId','volume_L','temp_C','contamination_ppm','flow_bps'}}, ...
   'SealedContainerBatch', {{'batchId','count','sealRating_days','flow_bps'}}, ...
   'StatusBus',        {{'unitId','opState','faultCode','power_kW','health'}}, ...
+  'BayStatusBus',     {{'unitId','opState','faultCode','power_kW','health','lineHealth'}}, ...
   'ControlBus',       {{'cmdType','targetId','setpoint'}}, ...
   'StockData',        {{'itemId','qty_units','error_pct'}}, ...
   'GravityData',      {{'gravity_g','compensation_pct'}}, ...
@@ -908,6 +932,78 @@ set_param(ph.Outport(1), 'DataLogging', 'on');
 ph = get_param([p '/' td], 'PortHandles');
 set_param(get_param(ph.Outport(1),'Line'), 'Name', 'loadedFlow_bps');
 set_param(ph.Outport(1), 'DataLogging', 'on');
+end
+
+function buildAggregator(mdlA, mdl, aggName, statusPorts)
+%BUILDAGGREGATOR Behavior for a bay status concentrator (ADR-037).
+%
+%   Emits bayStatus with:
+%     power_kW   sum of the members' reported power - the concentrator's
+%                OWN draw is deliberately excluded and accounted for in
+%                the plant controller's UnreportedPower constant instead.
+%                Folding it in here would add a standing offset to the
+%                signal the supervisor tests with outFlow > 0.001, which
+%                would carry the plant out of Startup before any line
+%                actually produced anything.
+%     health     worst member health, as the bay-level rollup
+%     lineHealth per-member health, padded to 4 with 1. The supervisor
+%                counts healthy units (sum(health(1:NumLines) > 0.5)), so
+%                a scalar rollup would turn one failed line into a whole
+%                plant halt. This vector is what keeps the aggregated
+%                model behaving exactly like the per-unit one.
+%
+%   and bayDirective, which fans the plant directive out to the members.
+
+p = beh(mdlA, cpath(mdl, aggName));
+n = numel(statusPorts);
+
+pw = cell(1, n);
+hl = cell(1, n);
+for k = 1:n
+    inEl(p, statusPorts{k}, 'power_kW');
+    pw{k} = blkOf(p, statusPorts{k});
+    hl{k} = addInEl(p, statusPorts{k}, 'health', [statusPorts{k} 'Hlth']);
+end
+
+outs = makeOuts(p, 'bayStatus', 'BayStatusBus', ...
+    {'unitId','1'; 'opState','1'; 'faultCode','0'});
+
+% --- summed member power ---
+if n == 1
+    lineTo(p, [pw{1} '/1'], outs('power_kW'));
+else
+    tot = addB(p, 'BayPower', 'simulink/Math Operations/Add', ...
+        {'Inputs', repmat('+', 1, n)});
+    for k = 1:n, lineTo(p, [pw{k} '/1'], sprintf('%s/%d', tot, k)); end
+    lineTo(p, [tot '/1'], outs('power_kW'));
+end
+
+% --- worst member health ---
+if n == 1
+    lineTo(p, [hl{1} '/1'], outs('health'));
+else
+    mn = addB(p, 'BayHealth', 'simulink/Math Operations/MinMax', ...
+        {'Function','min'; 'Inputs', num2str(n)});
+    for k = 1:n, lineTo(p, [hl{k} '/1'], sprintf('%s/%d', mn, k)); end
+    lineTo(p, [mn '/1'], outs('health'));
+end
+
+% --- per-member health vector, padded to 4 with 1 ---
+mx = addB(p, 'MemberHealth', 'simulink/Signal Routing/Mux', {'Inputs','4'});
+for k = 1:min(n, 4)
+    lineTo(p, [hl{k} '/1'], sprintf('%s/%d', mx, k));
+end
+if n < 4
+    one = addB(p, 'HealthPad', 'simulink/Sources/Constant', {'Value','1'});
+    for k = n+1:4
+        lineTo(p, [one '/1'], sprintf('%s/%d', mx, k));
+    end
+end
+lineTo(p, [mx '/1'], outs('lineHealth'));
+
+% --- directive fan-out ---
+makeOuts(p, 'bayDirective', 'ControlBus', ...
+    {'cmdType','0'; 'targetId','0'; 'setpoint','1'});
 end
 
 function path = cpath(mdl, name)
