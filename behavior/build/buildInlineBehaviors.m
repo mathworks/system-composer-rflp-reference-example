@@ -43,7 +43,7 @@ set_param(mdl, 'SolverType','Variable-step', 'StopTime','14400');
 % direct-sim setVariable(...,'Workspace',mdl) still shadows them)
 
 % --- TriPadLandingField: resupply source + outbound pass ---
-p = beh(mdlA, [mdl '/TriPadLandingField']);
+p = beh(mdlA, cpath(mdl,'TriPadLandingField'));
 inEl(p,'loadedShipment','flow_bps');
 outs = makeOuts(p,'inboundCargo','IngredientPallet', {'palletId','0';'mass_kg','0';'temp_C','4'});
 rs = addB(p,'ResupplyRate','simulink/Sources/Constant',{'Value','LB_Resupply_bph/3600'});
@@ -60,7 +60,7 @@ passThrough(p, blkOf(p,'loadedShipment'), outs('flow_bps'), 240/3600);
 stubStatus(p,'statusFleet', '15', '1');
 
 % --- ManualReceivingBay: rate-capped receive ---
-p = beh(mdlA, [mdl '/ManualReceivingBay']);
+p = beh(mdlA, cpath(mdl,'ManualReceivingBay'));
 inEl(p,'inboundCargo','flow_bps');
 outs = makeOuts(p,'receivedIngredients','IngredientPallet', {'palletId','0';'mass_kg','0';'temp_C','4'});
 passThrough(p, blkOf(p,'inboundCargo'), outs('flow_bps'), 250/3600);
@@ -70,7 +70,7 @@ stubStatus(p,'statusReceive', '5', '1');
 storeSpec = {'DryGoodsRack','stagedDry','stockDry','statusDryStore','2'; ...
              'ColdStoreLocker','stagedCold','stockCold','statusColdStore','25'};
 for s = 1:2
-    p = beh(mdlA, [mdl '/' storeSpec{s,1}]);
+    p = beh(mdlA, cpath(mdl, storeSpec{s,1}));
     inEl(p,'receivedIngredients','flow_bps');
     inEl(p,'directive','setpoint');
     g = addB(p,'HalfIn','simulink/Math Operations/Gain',{'Gain','0.5'});
@@ -88,7 +88,7 @@ for s = 1:2
 end
 
 % --- PrepWorkstation: sum staged flows -> BehPrepUnit ---
-p = beh(mdlA, [mdl '/PrepWorkstation']);
+p = beh(mdlA, cpath(mdl,'PrepWorkstation'));
 inEl(p,'stagedDry','flow_bps'); inEl(p,'stagedCold','flow_bps');
 inEl(p,'directive','setpoint');
 sm = addB(p,'SupplySum','simulink/Math Operations/Add',{'Inputs','++'});
@@ -112,7 +112,7 @@ term(p, [m '/2']);
 
 % --- BatchKettles: half share each -> BehCookVat (Simscape inside) ---
 for k = 1:2
-    p = beh(mdlA, sprintf('%s/BatchKettle%d', mdl, k));
+    p = beh(mdlA, cpath(mdl, sprintf('BatchKettle%d', k)));
     inEl(p,'preppedBatch','flow_bps');
     inEl(p,'directive','setpoint');
     g = addB(p,'HalfShare','simulink/Math Operations/Gain',{'Gain','0.5'});
@@ -139,7 +139,7 @@ for k = 1:2
 end
 
 % --- QCBench: merge kettles -> surge -> BehQCStation ---
-p = beh(mdlA, [mdl '/QCBench']);
+p = beh(mdlA, cpath(mdl,'QCBench'));
 inEl(p,'cookedSoup1','flow_bps'); inEl(p,'cookedSoup2','flow_bps');
 inEl(p,'directive','setpoint');
 sm = addB(p,'SoupSum','simulink/Math Operations/Add',{'Inputs','++'});
@@ -164,7 +164,7 @@ term(p, [m '/4']); term(p, [m '/5']);
 logContam(p, m);
 
 % --- SemiAutoPackager: surge -> BehPackager ---
-p = beh(mdlA, [mdl '/SemiAutoPackager']);
+p = beh(mdlA, cpath(mdl,'SemiAutoPackager'));
 inEl(p,'approvedSoup','flow_bps');
 inEl(p,'directive','setpoint');
 sg = addRef(p,'Surge','BehStorage', {'Capacity_bowls','80'; 'InitLevel_bowls','0'});
@@ -181,7 +181,7 @@ stubStatus(p,'statusPack', '20', gate);
 term(p, [sg '/2']); term(p, [sg '/3']);
 
 % --- SharedCraneDock: dock queue + crane pickup + transit (SR-GS-006) ---
-p = beh(mdlA, [mdl '/SharedCraneDock']);
+p = beh(mdlA, cpath(mdl,'SharedCraneDock'));
 inEl(p,'sealedContainers','flow_bps');
 outs = makeOuts(p,'loadedShipment','SealedContainerBatch', {'batchId','0';'count','0';'sealRating_days','365'});
 dockPath(p, blkOf(p,'sealedContainers'), outs('flow_bps'), ...
@@ -190,7 +190,7 @@ makeOuts(p,'manifest','ShippingManifestMsg', {'destinationId','0';'batchId','0';
 stubStatus(p,'statusDispatch', '18', '1');
 
 % --- OpsConsole: supervisor + telemetry aggregation ---
-p = beh(mdlA, [mdl '/OpsConsole']);
+p = beh(mdlA, cpath(mdl,'OpsConsole'));
 inEl(p,'statusCook1','health');
 inEl(p,'statusCook2','health');
 addInEl(p,'statusCook1','power_kW','Cook1Pwr');
@@ -225,13 +225,13 @@ mdtc = addB(p,'ModeDbl','simulink/Signal Attributes/Data Type Conversion',{'OutD
 lineTo(p, [sup '/2'], [mdtc '/1']); lineTo(p, [mdtc '/1'], touts('plantMode'));
 term(p, [sup '/1']);
 makeOuts(p,'productionDirective','ControlBus', {'cmdType','0';'targetId','0';'setpoint','1'});
-telemetryRoot(mdlA, [mdl '/OpsConsole'], 'telemetry');
+telemetryRoot(mdlA, cpath(mdl,'OpsConsole'), 'telemetry');
 
 % --- stubs ---
-stubOnly(mdlA, [mdl '/CompactFissionReactor'], {'statusPower','0'});
-stubOnly(mdlA, [mdl '/RefuelSkid'], {'statusRefuel','8'});
-stubOnly(mdlA, [mdl '/AGVCartPool'], {'statusTransport','8'});
-p = beh(mdlA, [mdl '/GravityCompUnit']);
+stubOnly(mdlA, cpath(mdl,'CompactFissionReactor'), {'statusPower','0'});
+stubOnly(mdlA, cpath(mdl,'RefuelSkid'), {'statusRefuel','8'});
+stubOnly(mdlA, cpath(mdl,'AGVCartPool'), {'statusTransport','8'});
+p = beh(mdlA, cpath(mdl,'GravityCompUnit'));
 % ADR-034: the compensator CONSUMES the root AmbientGravity input and
 % reports the measured field on envStatus.gravity_g (was a constant 1 -
 % a sensor that lied at any other gravity). Truth flows only when a
@@ -241,7 +241,7 @@ inEl(p,'ambientGravity','gravity_g');
 outs = makeOuts(p,'envStatus','GravityData', {'compensation_pct','100'});
 lineTo(p, [blkOf(p,'ambientGravity') '/1'], outs('gravity_g'));
 logLine(p, blkOf(p,'ambientGravity'), 'ambientGravity');
-p = beh(mdlA, [mdl '/BarcodeInventorySystem']);
+p = beh(mdlA, cpath(mdl,'BarcodeInventorySystem'));
 makeOuts(p,'inventoryStatus','StockData', {'itemId','1';'qty_units','500';'error_pct','0'});
 makeOuts(p,'reorderRequest','StockData', {'itemId','1';'qty_units','0';'error_pct','0'});
 
@@ -258,7 +258,7 @@ set_param(mdl, 'SolverType','Variable-step', 'StopTime','14400');
 % Manager overrides reach dictionary entries through external harnesses;
 % direct-sim setVariable(...,'Workspace',mdl) still shadows them)
 
-p = beh(mdlA, [mdl '/LaunchPadComplex']);
+p = beh(mdlA, cpath(mdl,'LaunchPadComplex'));
 inEl(p,'loadedShipment','flow_bps');
 outs = makeOuts(p,'inboundCargo','IngredientPallet', {'palletId','0';'mass_kg','0';'temp_C','4'});
 rs = addB(p,'ResupplyRate','simulink/Sources/Constant',{'Value','HC_Resupply_bph/3600'});
@@ -274,7 +274,7 @@ outs = makeOuts(p,'outboundShipments','SealedContainerBatch', {'batchId','0';'co
 passThrough(p, 'in_loadedShipment', outs('flow_bps'), 360/3600);
 stubStatus(p,'statusFleet', '20', '1');
 
-p = beh(mdlA, [mdl '/CargoGantryDock']);
+p = beh(mdlA, cpath(mdl,'CargoGantryDock'));
 inEl(p,'inboundCargo','flow_bps');
 outs = makeOuts(p,'receivedIngredients','IngredientPallet', {'palletId','0';'mass_kg','0';'temp_C','4'});
 passThrough(p, 'in_inboundCargo', outs('flow_bps'), 400/3600);
@@ -283,7 +283,7 @@ stubStatus(p,'statusReceive', '15', '1');
 hcStores = {'ColdStorageVault','stagedCold','stockCold','statusColdStore','40'; ...
             'AmbientStorageSilo','stagedAmbient','stockAmbient','statusAmbStore','10'};
 for s = 1:2
-    p = beh(mdlA, [mdl '/' hcStores{s,1}]);
+    p = beh(mdlA, cpath(mdl, hcStores{s,1}));
     inEl(p,'receivedIngredients','flow_bps');
     inEl(p,'directive','setpoint');
     g = addB(p,'HalfIn','simulink/Math Operations/Gain',{'Gain','0.5'});
@@ -303,7 +303,7 @@ end
 hcPreps = {'RoboticPrepLine1','stagedCold','preppedBatch1','statusPrep1','Fault_T_Prep1'; ...
            'RoboticPrepLine2','stagedAmbient','preppedBatch2','statusPrep2','Fault_T_Prep2'};
 for s = 1:2
-    p = beh(mdlA, [mdl '/' hcPreps{s,1}]);
+    p = beh(mdlA, cpath(mdl, hcPreps{s,1}));
     inEl(p, hcPreps{s,2}, 'flow_bps');
     inEl(p,'directive','setpoint');
     gate = faultGate(p, hcPreps{s,5});
@@ -328,7 +328,7 @@ hcCooks = {'ContinuousCookLine1','preppedBatch1','cookedSoup1','statusCook1','Fa
            'ContinuousCookLine3','preppedBatch2','cookedSoup3','statusCook3','Fault_T_Cook3'; ...
            'ContinuousCookLine4','preppedBatch2','cookedSoup4','statusCook4','Fault_T_Cook4'};
 for s = 1:4
-    p = beh(mdlA, [mdl '/' hcCooks{s,1}]);
+    p = beh(mdlA, cpath(mdl, hcCooks{s,1}));
     inEl(p, hcCooks{s,2}, 'flow_bps');
     inEl(p,'directive','setpoint');
     g = addB(p,'HalfShare','simulink/Math Operations/Gain',{'Gain','0.5'});
@@ -351,7 +351,7 @@ for s = 1:4
     lineTo(p, [gate '/1'], souts('health'));
 end
 
-p = beh(mdlA, [mdl '/InlineQCScanner']);
+p = beh(mdlA, cpath(mdl,'InlineQCScanner'));
 for s = 1:4, inEl(p, sprintf('cookedSoup%d',s), 'flow_bps'); end
 inEl(p,'directive','setpoint');
 sm = addB(p,'SoupSum','simulink/Math Operations/Add',{'Inputs','++++'});
@@ -375,7 +375,7 @@ term(p, [m '/2']); term(p, [m '/3']); term(p, [sg '/2']); term(p, [sg '/3']);
 term(p, [m '/4']); term(p, [m '/5']);
 logContam(p, m);
 
-p = beh(mdlA, [mdl '/HighSpeedPackagingLine']);
+p = beh(mdlA, cpath(mdl,'HighSpeedPackagingLine'));
 inEl(p,'approvedSoup','flow_bps');
 inEl(p,'directive','setpoint');
 sg = addRef(p,'Surge','BehStorage', {'Capacity_bowls','80'; 'InitLevel_bowls','0'});
@@ -391,7 +391,7 @@ lineTo(p, [m '/1'], outs('flow_bps'));
 stubStatus(p,'statusPack', '35', gate);
 term(p, [sg '/2']); term(p, [sg '/3']);
 
-p = beh(mdlA, [mdl '/CargoLoaderGantry']);
+p = beh(mdlA, cpath(mdl,'CargoLoaderGantry'));
 inEl(p,'sealedContainers','flow_bps');
 outs = makeOuts(p,'loadedShipment','SealedContainerBatch', {'batchId','0';'count','0';'sealRating_days','365'});
 dockPath(p, 'in_sealedContainers', outs('flow_bps'), ...
@@ -399,7 +399,7 @@ dockPath(p, 'in_sealedContainers', outs('flow_bps'), ...
 makeOuts(p,'manifest','ShippingManifestMsg', {'destinationId','0';'batchId','0';'count','0';'mass_kg','0'});
 stubStatus(p,'statusDispatch', '15', '1');
 
-p = beh(mdlA, [mdl '/CentralControlComputer']);
+p = beh(mdlA, cpath(mdl,'CentralControlComputer'));
 for s = 1:4, inEl(p, sprintf('statusCook%d',s), 'health'); end
 pwDyn = {};
 for s = 1:4, pwDyn{end+1} = addInEl(p, sprintf('statusCook%d',s), 'power_kW', sprintf('Cook%dPwr',s)); end %#ok<AGROW>
@@ -425,12 +425,12 @@ mdtc = addB(p,'ModeDbl','simulink/Signal Attributes/Data Type Conversion',{'OutD
 lineTo(p, [sup '/2'], [mdtc '/1']); lineTo(p, [mdtc '/1'], touts('plantMode'));
 term(p, [sup '/1']);
 makeOuts(p,'productionDirective','ControlBus', {'cmdType','0';'targetId','0';'setpoint','1'});
-telemetryRoot(mdlA, [mdl '/CentralControlComputer'], 'telemetry');
+telemetryRoot(mdlA, cpath(mdl,'CentralControlComputer'), 'telemetry');
 
-stubOnly(mdlA, [mdl '/FusionPowerPlant'], {'statusPower','0'});
-stubOnly(mdlA, [mdl '/RefuelingStation'], {'statusRefuel','20'});
-stubOnly(mdlA, [mdl '/ConveyorNetwork'], {'statusTransport','25'});
-p = beh(mdlA, [mdl '/GravityCompensatorArray']);
+stubOnly(mdlA, cpath(mdl,'FusionPowerPlant'), {'statusPower','0'});
+stubOnly(mdlA, cpath(mdl,'RefuelingStation'), {'statusRefuel','20'});
+stubOnly(mdlA, cpath(mdl,'ConveyorNetwork'), {'statusTransport','25'});
+p = beh(mdlA, cpath(mdl,'GravityCompensatorArray'));
 % ADR-034: the compensator CONSUMES the root AmbientGravity input and
 % reports the measured field on envStatus.gravity_g (was a constant 1 -
 % a sensor that lied at any other gravity). Truth flows only when a
@@ -440,7 +440,7 @@ inEl(p,'ambientGravity','gravity_g');
 outs = makeOuts(p,'envStatus','GravityData', {'compensation_pct','100'});
 lineTo(p, [blkOf(p,'ambientGravity') '/1'], outs('gravity_g'));
 logLine(p, blkOf(p,'ambientGravity'), 'ambientGravity');
-p = beh(mdlA, [mdl '/InventorySensorGrid']);
+p = beh(mdlA, cpath(mdl,'InventorySensorGrid'));
 makeOuts(p,'inventoryStatus','StockData', {'itemId','1';'qty_units','800';'error_pct','0'});
 makeOuts(p,'reorderRequest','StockData', {'itemId','1';'qty_units','0';'error_pct','0'});
 
@@ -457,7 +457,7 @@ set_param(mdl, 'SolverType','Variable-step', 'StopTime','14400');
 % Manager overrides reach dictionary entries through external harnesses;
 % direct-sim setVariable(...,'Workspace',mdl) still shadows them)
 
-p = beh(mdlA, [mdl '/TriplePadPort']);
+p = beh(mdlA, cpath(mdl,'TriplePadPort'));
 inEl(p,'loadedShipment','flow_bps');
 outs = makeOuts(p,'inboundCargo','IngredientPallet', {'palletId','0';'mass_kg','0';'temp_C','4'});
 rs = addB(p,'ResupplyRate','simulink/Sources/Constant',{'Value','ES_Resupply_bph/3600'});
@@ -473,13 +473,13 @@ outs = makeOuts(p,'outboundShipments','SealedContainerBatch', {'batchId','0';'co
 passThrough(p, 'in_loadedShipment', outs('flow_bps'), 280/3600);
 stubStatus(p,'statusFleet', '18', '1');
 
-p = beh(mdlA, [mdl '/AutoDock']);
+p = beh(mdlA, cpath(mdl,'AutoDock'));
 inEl(p,'inboundCargo','flow_bps');
 outs = makeOuts(p,'receivedIngredients','IngredientPallet', {'palletId','0';'mass_kg','0';'temp_C','4'});
 passThrough(p, 'in_inboundCargo', outs('flow_bps'), 300/3600);
 stubStatus(p,'statusReceive', '12', '1');
 
-p = beh(mdlA, [mdl '/DualZoneStore']);
+p = beh(mdlA, cpath(mdl,'DualZoneStore'));
 inEl(p,'receivedIngredients','flow_bps');
 inEl(p,'directive','setpoint');
 m = addRef(p,'Store','BehStorage', {'Capacity_bowls','ES_StorageCap_bowls'; ...
@@ -494,7 +494,7 @@ stubStatus(p,'statusStore', '35', '1');
 term(p, [m '/2']); term(p, [m '/3']);
 
 for cellN = 1:3
-    cellPath = sprintf('%s/ProductionCell%d', mdl, cellN);
+    cellPath = cpath(mdl, sprintf('ProductionCell%d', cellN));
     fvar = sprintf('Fault_T_Cell%d', cellN);
 
     p = beh(mdlA, [cellPath '/CellPrepUnit']);
@@ -611,7 +611,7 @@ for cellN = 1:3
     makeOuts(p,'cellDirective','ControlBus', {'cmdType','0';'targetId','0';'setpoint','1'});
 end
 
-p = beh(mdlA, [mdl '/AutoCargoLoader']);
+p = beh(mdlA, cpath(mdl,'AutoCargoLoader'));
 for s = 1:3, inEl(p, sprintf('containersCell%d',s), 'flow_bps'); end
 sm = addB(p,'ContainerSum','simulink/Math Operations/Add',{'Inputs','+++'});
 for s = 1:3, lineTo(p, sprintf('in_containersCell%d/1',s), sprintf('%s/%d',sm,s)); end
@@ -620,7 +620,7 @@ dockPath(p, sm, outs('flow_bps'), 'Transport_Rate_bph/3600', 'Transport_Latency_
 makeOuts(p,'manifest','ShippingManifestMsg', {'destinationId','0';'batchId','0';'count','0';'mass_kg','0'});
 stubStatus(p,'statusDispatch', '12', '1');
 
-p = beh(mdlA, [mdl '/ControlTriad']);
+p = beh(mdlA, cpath(mdl,'ControlTriad'));
 for s = 1:3, inEl(p, sprintf('statusCell%d',s), 'health'); end
 pwDyn = {};
 for s = 1:3, pwDyn{end+1} = addInEl(p, sprintf('statusCell%d',s), 'power_kW', sprintf('Cell%dPwr',s)); end %#ok<AGROW>
@@ -647,12 +647,12 @@ mdtc = addB(p,'ModeDbl','simulink/Signal Attributes/Data Type Conversion',{'OutD
 lineTo(p, [sup '/2'], [mdtc '/1']); lineTo(p, [mdtc '/1'], touts('plantMode'));
 term(p, [sup '/1']);
 makeOuts(p,'productionDirective','ControlBus', {'cmdType','0';'targetId','0';'setpoint','1'});
-telemetryRoot(mdlA, [mdl '/ControlTriad'], 'telemetry');
+telemetryRoot(mdlA, cpath(mdl,'ControlTriad'), 'telemetry');
 
-stubOnly(mdlA, [mdl '/RedundantReactorPair'], {'statusPower','0'});
-stubOnly(mdlA, [mdl '/AutoRefuelCell'], {'statusRefuel','10'});
-stubOnly(mdlA, [mdl '/RoboTransportSwarm'], {'statusTransport','15'});
-p = beh(mdlA, [mdl '/GravityCompMesh']);
+stubOnly(mdlA, cpath(mdl,'RedundantReactorPair'), {'statusPower','0'});
+stubOnly(mdlA, cpath(mdl,'AutoRefuelCell'), {'statusRefuel','10'});
+stubOnly(mdlA, cpath(mdl,'RoboTransportSwarm'), {'statusTransport','15'});
+p = beh(mdlA, cpath(mdl,'GravityCompMesh'));
 % ADR-034: the compensator CONSUMES the root AmbientGravity input and
 % reports the measured field on envStatus.gravity_g (was a constant 1 -
 % a sensor that lied at any other gravity). Truth flows only when a
@@ -662,7 +662,7 @@ inEl(p,'ambientGravity','gravity_g');
 outs = makeOuts(p,'envStatus','GravityData', {'compensation_pct','100'});
 lineTo(p, [blkOf(p,'ambientGravity') '/1'], outs('gravity_g'));
 logLine(p, blkOf(p,'ambientGravity'), 'ambientGravity');
-p = beh(mdlA, [mdl '/SmartInventoryNet']);
+p = beh(mdlA, cpath(mdl,'SmartInventoryNet'));
 makeOuts(p,'inventoryStatus','StockData', {'itemId','1';'qty_units','900';'error_pct','0'});
 makeOuts(p,'reorderRequest','StockData', {'itemId','1';'qty_units','0';'error_pct','0'});
 
@@ -908,6 +908,23 @@ set_param(ph.Outport(1), 'DataLogging', 'on');
 ph = get_param([p '/' td], 'PortHandles');
 set_param(get_param(ph.Outport(1),'Line'), 'Name', 'loadedFlow_bps');
 set_param(ph.Outport(1), 'DataLogging', 'on');
+end
+
+function path = cpath(mdl, name)
+%CPATH Full block path of the component called NAME, wherever it sits.
+%
+%   The physical models used to be flat, so every component was reachable
+%   at [mdl '/Name']. Since the bay regrouping (ADR-036) most of them sit
+%   one level down - PrepWorkstation is inside ProductionLine, the cook
+%   lines inside CookBay - and the bay membership is a layout decision
+%   that this builder has no reason to track. Resolving by name keeps the
+%   builder working across any future regrouping.
+hits = find_system(mdl, 'LookUnderMasks', 'all', 'FollowLinks', 'on', ...
+    'BlockType', 'SubSystem', 'Name', name);
+assert(~isempty(hits), 'No component named %s in %s.', name, mdl);
+assert(isscalar(hits), 'Component name %s is ambiguous in %s (%d matches).', ...
+    name, mdl, numel(hits));
+path = hits{1};
 end
 
 function passThrough(p, srcBlk, dstBlk, cap)

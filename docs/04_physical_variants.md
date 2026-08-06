@@ -94,4 +94,25 @@ The physical layer realizes each logical component (see [`03_logical_architectur
 | Launch/dock complex | 4-pad, automated gantries | 3 shared-crane pads | 3 independent pads |
 | Budget margin expectation | Tight | Best | Tightest |
 
+## 5. How the models are organised
+
+Each physical model groups its components into **bays** — one layer of hierarchy between the model root and the equipment — so that the root diagram reads the way the schematics above do: material flows left to right along one row, with shared services and the plant controller in a band below it (ADR-036).
+
+| Bay | HyperCook | LeanBroth | EverSimmer |
+|---|---|---|---|
+| `IntakeAndStorage` | dock, cold + ambient stores, inventory | receiving bay, cold + dry stores, inventory | dock, dual-zone store, inventory |
+| production | `PrepBay` (2 prep lines), `CookBay` (4 cook lines) | `ProductionLine` (prep, 2 kettles, QC, packaging) | `ProductionCell1..3` (unchanged — the cells predate the bay layer) |
+| `FinishingLine` | inline QC, packaging | *(inside `ProductionLine`)* | *(inside each cell)* |
+| `LaunchLogistics` | gantry, 4-pad complex, refuelling | shared crane dock, 3-pad field, refuel skid | cargo loader, triple pad, refuel cell |
+| `PlantServices` | fusion plant, gravity compensation, conveyors | fission reactor, gravity compensation, AGV pool | reactor pair, gravity mesh, transport swarm |
+| controller (at root) | `CentralControlComputer` | `OpsConsole` | `ControlTriad` |
+
+Bay membership is a **readability grouping, not a design change**: it moved no component, added none, and left every stereotype value, requirement link, and allocation intact, so the rolled-up metrics are unchanged. The bays carry the `PhysicalProperties` stereotype only so the roll-up can sum through them. The plant controller stays at the model root because every bay talks to it; nesting it would hide the control topology rather than clarify it.
+
+Both steps are re-runnable: [`architecture/build/regroupPhysicalBays.m`](../architecture/build/regroupPhysicalBays.m) for the grouping and [`architecture/build/layoutPhysicalBays.m`](../architecture/build/layoutPhysicalBays.m) for the layout. **Re-running `arrangeSystem` on these models discards the process-order placement** — `layoutPhysicalBays` has to be re-run to restore it.
+
+One thing the bays do **not** fix: each plant controller still carries one status input port per unit (19 / 16 / 13), and those lines still dominate the lower half of each root diagram. Collapsing them needs a per-bay status aggregator — a real component with mass, power, and cost, which is exactly what EverSimmer's `CellController` is — so it would move the metrics and re-open the trade study. See ADR-036 for that decision and for the remaining duplicate `directive` boundary ports.
+
+## 6. Trade study
+
 The MCDA trade study across these three variants, using the roll-up analysis of stereotype properties, is documented in [`06_trade_study_results.md`](06_trade_study_results.md) (methodology in [`05_trade_study_methodology.md`](05_trade_study_methodology.md)); see also the project [`README.md`](../README.md) trade study summary.

@@ -114,10 +114,9 @@ for v = 1:size(variants, 1)
         caps_s = zeros(numel(members), 1);
         avail_s = zeros(numel(members), 1);
         for k = 1:numel(members)
-            comp = [];
-            for c = instance.Components
-                if strcmp(c.Name, members{k}), comp = c; break; end
-            end
+            % Recursive lookup: since ADR-036 the stage members may sit
+            % inside a bay rather than at the top level of the model.
+            comp = gsFindComponent(instance, members{k});
             assert(~isempty(comp), 'Component %s not found in %s', members{k}, vname);
             if isempty(comp.Components)
                 caps_s(k) = comp.getValue([prefix 'Throughput_bph']);
@@ -153,10 +152,9 @@ for v = 1:size(variants, 1)
     % Availability includes support components (control, power, gravity comp)
     availSys = prod(stageAvail);
     for k = 1:numel(support.(vname))
-        comp = [];
-        for c = instance.Components
-            if strcmp(c.Name, support.(vname){k}), comp = c; break; end
-        end
+        comp = gsFindComponent(instance, support.(vname){k});
+        assert(~isempty(comp), 'Support component %s not found in %s', ...
+            support.(vname){k}, vname);
         mtbf = comp.getValue([prefix 'MTBF_hr']);
         availSys = availSys * (mtbf / (mtbf + MTTR_HR));
     end
