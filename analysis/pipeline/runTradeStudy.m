@@ -1,10 +1,14 @@
-function trade = runTradeStudy(includeVariants)
+function trade = runTradeStudy(includeVariants, varargin)
 %RUNTRADESTUDY MCDA trade study over the physical architecture variants.
 %
 %   trade = runTradeStudy() scores every variant in variantMetrics.mat.
 %   trade = runTradeStudy(includeVariants) restricts scoring to the given
 %   variant names (cellstr) - runFullAnalysis passes the subset that
 %   passed the formal compliance gate.
+%   trade = runTradeStudy(..., 'ResultTag', tag) writes a separate set of
+%   result files and figures instead of overwriting the canonical
+%   comparison artifacts. Tagged figures go under docs/figures/<tag>/ and
+%   tagged result files append _<tag> before the extension.
 %
 %   Produces:
 %     - tradeStudyResults.mat / tradeScores.csv    scores per scenario
@@ -17,7 +21,12 @@ function trade = runTradeStudy(includeVariants)
 
 proj = currentProject;
 anaDir = char(fullfile(proj.RootFolder, 'analysis', 'results'));
-figDir = char(fullfile(proj.RootFolder, 'docs', 'figures'));
+rootFigDir = char(fullfile(proj.RootFolder, 'docs', 'figures'));
+opts = iParseOptions(varargin{:});
+figDir = rootFigDir;
+if strlength(opts.ResultTag) > 0
+    figDir = char(fullfile(rootFigDir, opts.ResultTag));
+end
 if ~isfolder(figDir), mkdir(figDir); end
 
 S = load(fullfile(anaDir, 'variantMetrics.mat'));
@@ -94,12 +103,18 @@ trade.normalized = norm;
 trade.scenarios = scen;
 trade.scores = scores;
 trade.winShare = winShare;
-save(fullfile(anaDir, 'tradeStudyResults.mat'), 'trade');
+trade.outputTag = char(opts.ResultTag);
+trade.outputFiles = struct( ...
+    'resultsMat', fullfile(anaDir, iTaggedName('tradeStudyResults.mat', opts.ResultTag)), ...
+    'scoresCsv', fullfile(anaDir, iTaggedName('tradeScores.csv', opts.ResultTag)), ...
+    'winShareCsv', fullfile(anaDir, iTaggedName('mcWinShare.csv', opts.ResultTag)), ...
+    'figureDir', figDir);
+save(trade.outputFiles.resultsMat, 'trade');
 
 Tsc = array2table(scores, 'VariableNames', scenNames', 'RowNames', vnames');
-writetable(Tsc, fullfile(anaDir, 'tradeScores.csv'), 'WriteRowNames', true);
+writetable(Tsc, trade.outputFiles.scoresCsv, 'WriteRowNames', true);
 Tmc = table(vnames', winShare', 'VariableNames', {'Variant','WinShare'});
-writetable(Tmc, fullfile(anaDir, 'mcWinShare.csv'));
+writetable(Tmc, trade.outputFiles.winShareCsv);
 
 % ===================== Charts =====================
 % Per-variant colors resolved by name from the fixed palette
@@ -190,4 +205,36 @@ close(f);
 fprintf('Trade study complete. Scores:\n');
 disp(Tsc);
 fprintf('Monte Carlo win share: %s\n', strjoin(compose('%s %.1f%%', string(vnames'), winShare'*100), ', '));
+end
+
+function opts = iParseOptions(varargin)
+opts = struct('ResultTag', "");
+if isempty(varargin)
+    return;
+end
+assert(rem(numel(varargin), 2) == 0, 'Options must be provided as name/value pairs.');
+for k = 1:2:numel(varargin)
+    name = string(varargin{k});
+    value = varargin{k+1};
+    switch lower(name)
+        case "resulttag"
+            if isempty(value)
+                opts.ResultTag = "";
+            else
+                opts.ResultTag = string(value);
+                assert(strlength(opts.ResultTag) > 0, 'ResultTag must be nonempty when provided.');
+            end
+        otherwise
+            error('runTradeStudy:UnknownOption', 'Unknown option "%s".', name);
+    end
+end
+end
+
+function name = iTaggedName(baseName, tag)
+if strlength(tag) == 0
+    name = baseName;
+    return;
+end
+[folder, stem, ext] = fileparts(baseName);
+name = fullfile(folder, sprintf('%s_%s%s', stem, char(tag), ext));
 end

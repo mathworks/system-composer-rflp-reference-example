@@ -34,7 +34,7 @@ Two hard assertions protect the chain:
 1. The number of logged status signals must equal the number of gates (catches a drifted gate model).
 2. Every formal verdict must equal the corresponding procedural `OK_*` flag from `runVariantAnalysis` (the two independently implemented compliance paths cross-check each other; a mismatch is an error, not a warning).
 
-`runFullAnalysis.m` sequences the whole chain: roll-up, then formal gate, then MCDA. The trade study only runs if every variant passes the formal gate, which encodes the methodological position that a non-compliant variant has no business being scored.
+`runFullAnalysis.m` sequences the whole chain: roll-up, then formal gate, then MCDA. It always regenerates the three-variant comparison artifacts first, then, if the formal gate narrows the candidate set, writes the compliant-only decision rerun to tagged outputs (for example `tradeScores_compliant.csv` and `docs/figures/compliant/`) so the published comparison figures are not overwritten. This preserves the methodological position that a non-compliant variant has no business being scored for selection while keeping the full trade space visible in the docs.
 
 ## 4. Results
 

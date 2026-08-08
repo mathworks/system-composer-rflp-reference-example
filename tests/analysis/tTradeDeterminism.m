@@ -35,5 +35,29 @@ classdef (TestTags = {'analysis'}) tTradeDeterminism < sltest.TestCase
             testCase.verifyEqual(t.variants, {'EverSimmer'});
             testCase.verifyEqual(t.winShare, 1);
         end
+
+        function taggedOutputsDoNotOverwriteCanonicalComparison(testCase)
+            proj = currentProject;
+            anaDir = fullfile(proj.RootFolder, 'analysis', 'results');
+
+            % First write the canonical three-variant comparison outputs.
+            runTradeStudy();
+            canonical = readtable(fullfile(anaDir, 'tradeScores.csv'), ...
+                'ReadRowNames', true);
+            testCase.verifyEqual(canonical.Properties.RowNames, ...
+                {'HyperCook'; 'LeanBroth'; 'EverSimmer'});
+
+            % Then write the compliant-only decision rerun to a tagged set.
+            runTradeStudy({'EverSimmer'}, 'ResultTag', 'compliant');
+            tagged = readtable(fullfile(anaDir, 'tradeScores_compliant.csv'), ...
+                'ReadRowNames', true);
+            testCase.verifyEqual(tagged.Properties.RowNames, {'EverSimmer'});
+
+            % The canonical comparison outputs must still be intact.
+            canonicalAfter = readtable(fullfile(anaDir, 'tradeScores.csv'), ...
+                'ReadRowNames', true);
+            testCase.verifyEqual(canonicalAfter.Properties.RowNames, ...
+                canonical.Properties.RowNames);
+        end
     end
 end
