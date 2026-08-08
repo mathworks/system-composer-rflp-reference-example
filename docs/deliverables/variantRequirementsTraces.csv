@@ -10,7 +10,7 @@ SR-GS-008,Serving temperature,HyperCook,direct + functional,-,"-",-
 SR-GS-009,Container seal life,HyperCook,direct + functional,-,"-",-
 SR-GS-010,Inventory accuracy,HyperCook,functional,-,"-",-
 SR-GS-011,Mass budget,HyperCook,direct,PASS,"-",gate PASS
-SR-GS-012,Power budget,HyperCook,direct,PASS,"-",gate PASS
+SR-GS-012,Power budget,HyperCook,direct,FAIL,"no test case; formal gate FAILS",FAILS
 SR-GS-013,Cost budget,HyperCook,direct,FAIL,"no test case; formal gate FAILS",FAILS
 SR-GS-014,Volume budget,HyperCook,direct,FAIL,"no test case; formal gate FAILS",FAILS
 SR-GS-015,Gravity operating range,HyperCook,direct + functional,PASS,"""HyperCook at 0.1 g""; ""HyperCook at 12 g""",verified

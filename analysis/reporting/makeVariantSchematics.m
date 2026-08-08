@@ -30,7 +30,7 @@ onebox(76, 17, 'Pack', gray_, inkP, 'single string');
 flowArrow(88, 17, 9, inkS); text(89.5, 20.5, 'ship', 'FontSize', 9, 'Color', inkS);
 linkAll([10 27 44 61 76], 17, inkS);
 title('HyperCook - throughput first', 'FontSize', 13, 'Color', inkP, 'FontWeight','normal');
-caption('4 parallel continuous cook lines  \cdot  QC and packaging are single-string  \cdot  308 bph simulated, budgets near their caps', inkS);
+caption('4 parallel continuous cook lines  \cdot  QC and packaging are single-string  \cdot  308 bph simulated, over the power, cost and volume caps', inkS);
 exportgraphics(f, fullfile(figDir,'variant_schematic_hypercook.png'), 'Resolution', 200);
 close(f);
 

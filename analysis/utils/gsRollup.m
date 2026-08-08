@@ -1,4 +1,4 @@
-function gsRollup(instance, varargin)
+mafunction gsRollup(instance, varargin)
 %GSROLLUP PostOrder roll-up of additive PhysicalProperties through the hierarchy.
 %   Composites receive the sum of their children for each additive property.
 %   Use with: iterate(instance, 'PostOrder', @gsRollup)

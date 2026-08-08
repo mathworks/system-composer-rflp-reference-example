@@ -4,6 +4,8 @@ Methodology: [`05_trade_study_methodology.md`](05_trade_study_methodology.md). S
 
 The trade study has been run. This document reports the full results and the recommendation that follows from them.
 
+Live pipeline note: the figures under `docs/figures` now track the full-comparison rerun over all three variants. If the formal gate narrows the candidate set, the compliant-only decision rerun is published separately under `../analysis/results/*_compliant.*` and `figures/compliant/` so these comparison figures are not overwritten.
+
 *Note: the embedded figure files track the live analysis pipeline (regenerated on every full run — currently behavioral-era numbers in the dark house theme), while the tables in this document record the static-era values as of the original study. Where they differ, the tables are the as-of-then record.*
 
 ## 1. Rolled-up metrics and budget utilization

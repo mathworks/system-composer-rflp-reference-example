@@ -31,10 +31,16 @@ classdef (TestTags = {'analysis'}) tRollupInvariants < sltest.TestCase
             % (0.025 kg / 0.0010 m3 / 0.004 kCr per added bowl of capacity)
             % to every storage component. Pre-resolution totals were
             % 14320/498/1980/397, 7570/239/1070/240, 11120/363/1905/297.
+            % ADR-037 rebaseline: bay status concentrators added, 6/4/3 per
+            % variant at 15 kg / 0.4 kW / 6 kCr / 0.15 m3 each. Totals
+            % before that change were 14827.5/498/2061.2/417.3,
+            % 7907.5/239/1124.0/253.5, 11510.0/363/1967.4/312.6. The power
+            % column is the one that matters: HyperCook was at 498 of its
+            % 500 kW cap and the concentrators pushed it over.
             golden = { ... % Variant, Mass_kg, Power_kW, Cost_kCredits, Volume_m3
-                'HyperCook',  14827.5, 498, 2061.2, 417.3; ...
-                'LeanBroth',   7907.5, 239, 1124.0, 253.5; ...
-                'EverSimmer', 11510.0, 363, 1967.4, 312.6};
+                'HyperCook',  14917.5, 500.4, 2097.2, 418.20; ...
+                'LeanBroth',   7967.5, 240.6, 1148.0, 254.10; ...
+                'EverSimmer', 11555.0, 364.2, 1985.4, 313.05};
             for i = 1:size(golden,1)
                 r = testCase.R(strcmp({testCase.R.Variant}, golden{i,1}));
                 testCase.assertNotEmpty(r, golden{i,1});

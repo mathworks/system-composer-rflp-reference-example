@@ -94,4 +94,36 @@ The physical layer realizes each logical component (see [`03_logical_architectur
 | Launch/dock complex | 4-pad, automated gantries | 3 shared-crane pads | 3 independent pads |
 | Budget margin expectation | Tight | Best | Tightest |
 
+## 5. How the models are organised
+
+Each physical model groups its components into **bays** — one layer of hierarchy between the model root and the equipment — so that the root diagram reads the way the schematics above do: material flows left to right along one row, with shared services and the plant controller in a band below it (ADR-036).
+
+| Bay | HyperCook | LeanBroth | EverSimmer |
+|---|---|---|---|
+| `IntakeAndStorage` | dock, cold + ambient stores, inventory | receiving bay, cold + dry stores, inventory | dock, dual-zone store, inventory |
+| production | `PrepBay` (2 prep lines), `CookBay` (4 cook lines) | `ProductionLine` (prep, 2 kettles, QC, packaging) | `ProductionCell1..3` (unchanged — the cells predate the bay layer) |
+| `FinishingLine` | inline QC, packaging | *(inside `ProductionLine`)* | *(inside each cell)* |
+| `LaunchLogistics` | gantry, 4-pad complex, refuelling | shared crane dock, 3-pad field, refuel skid | cargo loader, triple pad, refuel cell |
+| `PlantServices` | fusion plant, gravity compensation, conveyors | fission reactor, gravity compensation, AGV pool | reactor pair, gravity mesh, transport swarm |
+| controller (at root) | `CentralControlComputer` | `OpsConsole` | `ControlTriad` |
+
+The bay grouping itself was a **readability change, not a design change**: it moved no component, added none, and left every stereotype value, requirement link, and allocation intact, so the rolled-up metrics were unchanged (ADR-036). The bays carry the `PhysicalProperties` stereotype only so the roll-up can sum through them.
+
+### Bay status concentrators
+
+Each bay then gained a **status concentrator** (ADR-037) — `IntakeController`, `CookController`, `LaunchController` and so on. It receives the plant directive once and fans it out to the bay's members, and rolls the members' status into a single `bayStatus`. Plant controller inputs drop from one per unit to one per bay:
+
+| | HyperCook | LeanBroth | EverSimmer |
+|---|---|---|---|
+| Controller inputs | 19 → **9** | 16 → **7** | 13 → **9** |
+| Concentrators added | 6 | 4 | 3 |
+
+Unlike the grouping, this **is** a design change and it moves the numbers — a concentrator is real hardware (15 kg / 0.4 kW / 6 kCredits / 0.15 m³ each). Simulated throughput and fault retention are unchanged to five significant figures, but mass, cost, volume and power all rise, availability falls slightly (a concentrator is a single point of failure for its bay), and **HyperCook loses its power gate**: it sat at 498.0 kW of a 500 kW cap and six concentrators put it at 500.4. The formal gate reads 20/24 rather than 21/24. EverSimmer absorbs its three with 14.6 kCredits of cost margin left and is still the only compliant variant, so the selection is unchanged. Sizing is load-bearing: above roughly **10.8 kCredits per concentrator** EverSimmer also fails cost and the compliant set goes empty.
+
+The plant controller stays at the model root because every bay talks to it; nesting it would hide the control topology rather than clarify it.
+
+All three steps are re-runnable, in order: [`regroupPhysicalBays`](../architecture/build/regroupPhysicalBays.m), [`addStatusAggregators`](../architecture/build/addStatusAggregators.m), then `buildInlineBehaviors` per variant for the concentrator behaviours, and [`layoutPhysicalBays`](../architecture/build/layoutPhysicalBays.m) last. **Re-running `arrangeSystem` on these models discards the process-order placement** — `layoutPhysicalBays` has to be re-run to restore it.
+
+## 6. Trade study
+
 The MCDA trade study across these three variants, using the roll-up analysis of stereotype properties, is documented in [`06_trade_study_results.md`](06_trade_study_results.md) (methodology in [`05_trade_study_methodology.md`](05_trade_study_methodology.md)); see also the project [`README.md`](../README.md) trade study summary.
