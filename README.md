@@ -22,7 +22,9 @@ The facility receives ingredient deliveries by rocket, stores and prepares them,
 
 ## Getting started
 
-Open the MATLAB project at [`IntergalacticVeganSoupFactory.prj`](IntergalacticVeganSoupFactory.prj) to load project paths and artifact context. Then run [`analysis/pipeline/runFullAnalysis.m`](analysis/pipeline/runFullAnalysis.m) to regenerate the main analysis outputs, including the compliance gate and trade-study results; run `tests/runAllTests` afterward if you want to verify those results and refresh requirements verification status.
+Open the MATLAB project at [`IntergalacticVeganSoupFactory.prj`](IntergalacticVeganSoupFactory.prj) to load project paths and artifact context, then read [`GettingStarted.md`](GettingStarted.md) for a quick orientation pass through the repo: where the requirements live, where the architecture models and stereotypes are defined, where the analysis entry points and results are, and where to read next. It is intentionally a table of contents, not a results walkthrough.
+
+To rebuild rather than read, run [`analysis/pipeline/runFullAnalysis.m`](analysis/pipeline/runFullAnalysis.m) to regenerate the main analysis outputs, including the compliance gate and trade-study results; run `tests/runAllTests` afterward if you want to verify those results and refresh requirements verification status.
 
 ## Folder structure
 
