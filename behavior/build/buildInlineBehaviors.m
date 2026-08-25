@@ -24,6 +24,7 @@ function buildInlineBehaviors(variant)
 %   Destructive and idempotent per component: existing behavior contents
 %   (except port blocks) are cleared and rebuilt.
 
+recordGenerated('reset');
 switch variant
     case 'LeanBroth',  buildLeanBroth();
     case 'HyperCook',  buildHyperCook();
@@ -247,6 +248,7 @@ makeOuts(p,'inventoryStatus','StockData', {'itemId','1';'qty_units','500';'error
 makeOuts(p,'reorderRequest','StockData', {'itemId','1';'qty_units','0';'error_pct','0'});
 
 save(mdlA);
+arrangeGenerated();
 fprintf('%s: inline behaviors built\n', mdl);
 end
 
@@ -458,6 +460,7 @@ makeOuts(p,'inventoryStatus','StockData', {'itemId','1';'qty_units','800';'error
 makeOuts(p,'reorderRequest','StockData', {'itemId','1';'qty_units','0';'error_pct','0'});
 
 save(mdlA);
+arrangeGenerated();
 fprintf('%s: inline behaviors built\n', mdl);
 end
 
@@ -690,6 +693,7 @@ makeOuts(p,'inventoryStatus','StockData', {'itemId','1';'qty_units','900';'error
 makeOuts(p,'reorderRequest','StockData', {'itemId','1';'qty_units','0';'error_pct','0'});
 
 save(mdlA);
+arrangeGenerated();
 fprintf('%s: inline behaviors built\n', mdl);
 end
 
@@ -724,9 +728,60 @@ end
 for c = find_system(path,'SearchDepth',1,'BlockType','Outport')'
     set_param(c{1}, 'Name', ['out_' get_param(c{1},'PortName')]);
 end
-p = path; %#ok<NASGU>
 p = path;
+recordGenerated(p);
 fprintf('  [%s]\n', compName);
+end
+
+function paths = recordGenerated(p)
+% Accumulate the interiors this build populates, so the layout pass can
+% target exactly them. recordGenerated('reset') clears the list;
+% recordGenerated() with no arguments drains it (returns and empties).
+persistent list
+if isempty(list), list = {}; end
+if nargin == 0
+    paths = list; list = {}; return
+end
+if strcmp(p, 'reset')
+    list = {}; paths = {}; return
+end
+list{end+1} = p;
+paths = list;
+end
+
+function arrangeGenerated()
+% Lay out every interior this build GENERATED - and nothing else.
+%
+% The population code adds blocks with add_block and no explicit
+% Position, so they land on the same default spot and stack. Simulink's
+% layout engine clears that in well under a second per subsystem; the
+% diagrams were only ever unreadable because nothing asked it to run.
+%
+% The SCOPE matters as much as the pass. Two kinds of container live in
+% these models:
+%
+%   generated          a component's inline behavior interior, wiped and
+%                      repopulated on every rebuild. Hand layout there
+%                      cannot survive one, so an automatic arrange beats
+%                      the stacked default outright.
+%   architecture-owned the root, and the bay composites introduced by
+%                      ADR-036, whose contents are architecture
+%                      components this script never adds or removes.
+%                      Their positions DO survive a rebuild, and they
+%                      have been laid out by hand - leave them alone.
+%
+% Arranging by traversal cannot tell the two apart: a depth-1 sweep
+% re-lays-out the bays, losing that hand layout, while missing the
+% component interiors nested beneath them. Driving the pass from what
+% beh() populated gets the set exactly right and stays right as
+% components move between bays.
+%
+% Note the namespace: the bare name `arrangeSystem` does not resolve.
+paths = recordGenerated();
+for i = 1:numel(paths)
+    Simulink.BlockDiagram.arrangeSystem(paths{i});
+end
+fprintf('  arranged %d generated interiors\n', numel(paths));
 end
 
 function b = blkOf(p, portName)
