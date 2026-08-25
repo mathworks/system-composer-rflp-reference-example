@@ -16,7 +16,7 @@ The architectural components are the componentization guide. Every physical vari
 | `BehCookVat` | Model reference | BatchKettle1/2 (LeanBroth), CellCookVat (EverSimmer) | **Stateflow** batch sequencer (Idle→Fill→Heat→Simmer→Drain→Clean) driving a **Simscape** thermal network (heater source, thermal mass, convective loss); throughput *emerges* from the batch cycle |
 | `BehQCStation` | Model reference | InlineQCScanner, QCBench, CellQCSensor | **Stateflow** inspection modes incl. periodic calibration downtime; reject-fraction yield loss |
 | `BehPackager` | Model reference | HighSpeedPackagingLine, SemiAutoPackager, CellPackager | Rate-limited packaging with backlog |
-| `BehSupervisor` | Model reference | ProductionControlSystem concepts (CentralControlComputer, OpsConsole, ControlTriad) | **Stateflow** plant modes (Startup/Nominal/Degraded/Halted), per-line enable/disable on health loss |
+| `BehSupervisor` | Model reference | ProductionControlSystem concepts (CentralControlComputer, OpsConsole, ControlTriad) | **Stateflow** plant modes (Startup/Running/Degraded/Halted), per-line enable/disable on health loss |
 | `BehProductionCell` | Model reference (composite) | ProductionCell1..3 (EverSimmer) | Composes BehPrepUnit→BehCookVat→BehQCStation→BehPackager, mirroring the architecture's cell decomposition |
 | `SubTransport` | **Subsystem reference** (masked) | ConveyorNetwork, AGVCartPool, RoboTransportSwarm | Transfer-rate saturation + transport latency |
 | `SubFaultGate` | **Subsystem reference** | (cross-cutting) | Health/enable gating of a flow |
@@ -58,7 +58,7 @@ Parameterization contract (ADR-016): component models declare **model arguments*
 
 - **BehCookVat cycle**: Idle → Fill (hopper→vat at fill rate) → Heat (heater on until simmer temperature) → Simmer (bang-bang hold for simmer time) → Drain (batch out at drain rate) → Clean → Idle. Heater power, thermal mass, and convective loss set the heat-up segment physically; batch size / total cycle time reproduces the stereotype throughput at nominal parameters and *degrades it* when starved upstream.
 - **BehQCStation**: throughput-limited inspection with a periodic calibration outage (Inspecting ⇄ Calibrating) and a reject fraction diverted off the good path — the first yield-loss mechanism in the project (the static roll-up assumed lossless flow).
-- **BehSupervisor**: Startup until output established → Nominal; any line-health drop → Degraded with failed lines disabled; all lines lost → Halted. Mode and per-line enables are plant outputs, so degraded-capacity behavior is observable and testable.
+- **BehSupervisor**: Startup until material flows (`outFlow > 0.001`) → Running; any line-health drop → Degraded with failed lines disabled; all lines lost → Halted. Mode and per-line enables are plant outputs, so degraded-capacity behavior is observable and testable. The mode axis is **availability, not production rate** — the second state was called `Nominal` until ADR-043 renamed it, which invited exactly the misreading that a plant in that state is producing at its nominal rate. Time to nominal rate is measured (`gsStartupMetrics`, [`20_startup_transient.md`](20_startup_transient.md)), never read off this signal.
 
 ![BehCookVat model](figures/beh_cookvat_model.png)
 *BehCookVat: Stateflow batch sequencer driving the Simscape thermal network.*

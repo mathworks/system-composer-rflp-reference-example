@@ -6,7 +6,15 @@ function beh = runBehavioralAnalysis()
 %
 %     SimThroughput_bph   steady-state packaged throughput at the root
 %                         OutboundShipments.flow_bps port, nominal run
-%     TimeToFirstOut_s    cold-start time until packaged flow appears
+%     TimeToFirstSoup_s   cold-start time until COOKED SOUP first exists
+%                         at the cook-stage output (logged soupFlow_*)
+%     TimeToFirstOut_s    cold-start time until PACKAGED flow appears at
+%                         the root port - later by the QC/packaging lag
+%     TimeToNominal_s     cold start to a SUSTAINED nominal production
+%                         rate (dwell band, gsStartupMetrics / ADR-040)
+%     TimeToModeRunning_s when the supervisor enters RUNNING (all lines
+%                         healthy and flowing - a health state, not a rate)
+%     StartupEnergy_kWh   energy consumed before the plant reaches nominal
 %     Energy_kWh_per_bowl integrated Telemetry.totalPower_kW (aggregated
 %                         by the controller from every component's status
 %                         bus, incl. physical heater duty) per bowl
@@ -46,21 +54,33 @@ for v = 1:size(plants, 1)
         'SaveOutput','on', 'SaveFormat','Dataset');
     out = sim(in);
     [flow, tele] = harvest(out);
+    soup = harvestSoup(out);
 
     ss = flow.Time >= T_SS;
     r.Variant = plants{v,1};
     r.SimThroughput_bph = trapz(flow.Time(ss), flow.Data(ss)) ...
                           / (flow.Time(end) - T_SS) * 3600;
-    firstIdx = find(flow.Data > 1e-3, 1);
-    assert(~isempty(firstIdx), '%s produced no output', mdl);
-    r.TimeToFirstOut_s = flow.Time(firstIdx);
+
+    % --- startup transient (SR-GS-025): the two questions are separate,
+    % and the shared extractor is also what the Simulink Test criteria
+    % call, so analysis and evidence cannot drift apart
+    st = gsStartupMetrics(struct('flow', flow, 'soup', soup, ...
+        'mode', tele.plantMode, 'power', tele.totalPower_kW), ...
+        struct('SteadyStart_s', T_SS));
+    assert(~isnan(st.TimeToFirstOut_s), '%s produced no output', mdl);
+    r.TimeToFirstSoup_s   = st.TimeToFirstSoup_s;
+    r.TimeToFirstOut_s    = st.TimeToFirstOut_s;
+    r.TimeToNominal_s     = st.TimeToNominal_s;
+    r.TimeToModeRunning_s = st.TimeToModeRunning_s;
+    r.StartupEnergy_kWh   = st.StartupEnergy_kWh;
+
     bowlsSS  = trapz(flow.Time(ss), flow.Data(ss));
     pw = tele.totalPower_kW;
     energySS = trapz(pw.Time(pw.Time >= T_SS), pw.Data(pw.Time >= T_SS)) / 3600;
     r.Energy_kWh_per_bowl = energySS / bowlsSS;
     r.MeanPower_kW = mean(pw.Data(pw.Time >= T_SS));
     r.PeakPower_kW = max(pw.Data);
-    assert(tele.plantMode.Data(end) == 1, '%s not Nominal at end of clean run', mdl);
+    assert(tele.plantMode.Data(end) == 1, '%s not Running at end of clean run', mdl);
 
     % --- Worst-case single-fault run (component self-gates at T_FAULT) ---
     in = Simulink.SimulationInput(mdl);
@@ -80,6 +100,9 @@ for v = 1:size(plants, 1)
     if isempty(beh), beh = r; else, beh(end+1) = r; end %#ok<AGROW>
     traces(v).nomT = flow.Time / 3600;  traces(v).nomY = flow.Data * 3600;
     traces(v).fltT = fflow.Time / 3600; traces(v).fltY = fflow.Data * 3600;
+    traces(v).st   = st;
+    % show the startup window with headroom past the slowest settle
+    traces(v).stopMinutes = 1.3 * max([st.TimeToNominal_s, st.TimeToFirstOut_s, 1800]) / 60;
 end
 
 save(fullfile(anaDir, 'behavioralMetrics.mat'), 'beh');
@@ -123,8 +146,66 @@ title(ax,'Worst-case single-fault response (fault at t = 2 h)', ...
 exportgraphics(f, fullfile(figDir,'behavioral_fault.png'), 'Resolution', 200);
 close(f);
 
+% --- Startup transient: the two SR-GS-025 questions, drawn (ADR-040) ---
+% Rate is the trailing 5-minute production rate, i.e. what the plant is
+% actually delivering - not the instantaneous flow, which for the batch
+% variants is a train of drain spikes and reads as noise.
+tMax = max([traces.stopMinutes]);
+f = figure('Visible','off','Color',surf_,'Position',[100 100 900 420]);
+ax = axes(f); hold(ax,'on');
+h = gobjects(1,3);
+for v = 1:3
+    st = traces(v).st;
+    h(v) = plot(ax, st.Rate_t/60, st.Rate_bph, 'Color', cols(v,:), 'LineWidth', 2);
+    yline(ax, st.SettleBand_bph, ':', 'Color', cols(v,:), 'LineWidth', 1);
+    % first soup and first packaged output sit at zero delivered rate -
+    % the gap between them is the QC/packaging pipeline lag
+    plot(ax, st.TimeToFirstSoup_s/60, 0, 'o', 'Color', cols(v,:), ...
+        'MarkerFaceColor', surf_, 'MarkerSize', 7, 'LineWidth', 1.5);
+    plot(ax, st.TimeToFirstOut_s/60, 0, 's', 'Color', cols(v,:), ...
+        'MarkerFaceColor', cols(v,:), 'MarkerSize', 7);
+    if ~isnan(st.TimeToNominal_s)
+        plot(ax, st.TimeToNominal_s/60, st.SettleBand_bph, '^', ...
+            'Color', cols(v,:), 'MarkerFaceColor', cols(v,:), 'MarkerSize', 8);
+    end
+end
+yline(ax, 200, '--', 'SR-GS-002 floor (200 bph)', 'Color', th.limit, ...
+    'LineWidth', 1, 'FontSize', 9, 'LabelHorizontalAlignment','left');
+xlim(ax, [0 tMax]);
+set(ax,'YGrid','on','GridColor',gridC,'GridAlpha',1,'Box','off','Color',surf_, ...
+    'XColor',inkS,'YColor',inkS,'FontSize',10);
+xlabel(ax,'Time from cold start (min)','Color',inkP);
+ylabel(ax,'Trailing 5-min production rate (bph)','Color',inkP);
+legend(ax, h, {beh.Variant}, 'Location','southeast','Box','off','TextColor',inkP);
+% keep the title short enough not to clip at the axes width; the marker
+% legend lives in the figure caption in docs/20
+title(ax,'Cold start: ramp to sustained nominal production rate', ...
+    'Color',inkP,'FontWeight','normal','FontSize',12);
+exportgraphics(f, fullfile(figDir,'behavioral_startup.png'), 'Resolution', 200);
+close(f);
+
 fprintf('Behavioral analysis complete (architecture-level simulation):\n');
 disp(struct2table(beh));
+end
+
+function soup = harvestSoup(out)
+% Cook-stage soup flow from logsout. HyperCook and LeanBroth have a
+% plant-wide merge point and log a single soupFlow_bps; EverSimmer's
+% three cells never merge before packaging, so its per-cell signals are
+% summed here to the same quantity (see buildInlineBehaviors).
+ls = out.logsout;
+names = string(ls.getElementNames());
+if any(names == "soupFlow_bps")
+    soup = ls.get('soupFlow_bps').Values;
+    return
+end
+cells = names(startsWith(names, "soupFlow_Cell"));
+assert(~isempty(cells), ['no cook-stage soup signal logged - re-run ' ...
+    'behavior/build/buildInlineBehaviors and save the model']);
+soup = ls.get(char(cells(1))).Values;
+for k = 2:numel(cells)
+    soup = soup + resample(ls.get(char(cells(k))).Values, soup.Time);
+end
 end
 
 function [flow, tele] = harvest(out)

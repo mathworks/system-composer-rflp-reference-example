@@ -187,6 +187,8 @@ for v = 1:size(variants, 1)
     r.BehavioralSource      = false;
     r.Energy_kWh_per_bowl   = NaN;
     r.TimeToFirstOut_s      = NaN;
+    r.TimeToFirstSoup_s     = NaN;
+    r.TimeToNominal_s       = NaN;
     behFile = fullfile(anaDir, 'behavioralMetrics.mat');
     if isfile(behFile)
         B = load(behFile);
@@ -196,6 +198,8 @@ for v = 1:size(variants, 1)
         r.N1Retention         = B.beh(bi).SimRetention;
         r.Energy_kWh_per_bowl = B.beh(bi).Energy_kWh_per_bowl;
         r.TimeToFirstOut_s    = B.beh(bi).TimeToFirstOut_s;
+        r.TimeToFirstSoup_s   = B.beh(bi).TimeToFirstSoup_s;
+        r.TimeToNominal_s     = B.beh(bi).TimeToNominal_s;
         r.BehavioralSource    = true;
     end
 

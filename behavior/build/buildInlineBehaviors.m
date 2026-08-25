@@ -147,6 +147,9 @@ sm = addB(p,'SoupSum','simulink/Math Operations/Add',{'Inputs','++'});
 line(p, blkOf(p,'cookedSoup1'), sm); lineTo(p, [blkOf(p,'cookedSoup2') '/1'], [sm '/2']);
 sg = addRef(p,'Surge','BehStorage', {'Capacity_bowls','150'; 'InitLevel_bowls','0'});
 line(p, sm, [sg '/1']);
+% cook-stage soup flow: when soup first EXISTS, upstream of QC and
+% packaging (SR-GS-025.1, ADR-040)
+logLine(p, sm, 'soupFlow_bps');
 dr = addB(p,'QCDraw','simulink/Sources/Constant',{'Value','LB_QCRate_bph/3600'});
 line(p, dr, [sg '/2']);
 gate = faultGate(p, 'Fault_T_QC');
@@ -361,6 +364,9 @@ sm = addB(p,'SoupSum','simulink/Math Operations/Add',{'Inputs','++++'});
 for s = 1:4, lineTo(p, sprintf('in_cookedSoup%d/1',s), sprintf('%s/%d',sm,s)); end
 sg = addRef(p,'Surge','BehStorage', {'Capacity_bowls','120'; 'InitLevel_bowls','0'});
 line(p, sm, sg);
+% cook-stage soup flow: when soup first EXISTS, upstream of QC and
+% packaging (SR-GS-025.1, ADR-040)
+logLine(p, sm, 'soupFlow_bps');
 dr = addB(p,'QCDraw','simulink/Sources/Constant',{'Value','HC_QCRate_bph/3600'});
 lineTo(p, [dr '/1'], [sg '/2']);
 gate = faultGate(p, 'Fault_T_QC');
@@ -556,6 +562,10 @@ for cellN = 1:3
     lineTo(p, [m '/2'], souts('power_kW'));
     lineTo(p, [gate '/1'], souts('health'));
     term(p, [m '/5']);
+    % cook-stage soup flow, per cell: EverSimmer has no plant-wide soup
+    % merge point, so the three are summed by the consumer to get the
+    % same quantity HC/LB log as soupFlow_bps (SR-GS-025.1, ADR-040)
+    logLine(p, m, sprintf('soupFlow_Cell%d', cellN));
     if cellN == 1
         % log served-soup temperature AND vat state for SR-GS-008
         % verification: serving temp = temp while state == VAT_DRAIN.

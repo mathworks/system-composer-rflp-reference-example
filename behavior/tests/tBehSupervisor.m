@@ -5,20 +5,25 @@ classdef tBehSupervisor < sltest.TestCase
     %   Inports:  lineHealth (width 4), outFlow_bps
     %   Outports: lineEnable (width 4), plantMode (uint8)
     %
-    % plantMode codes: 0 STARTUP, 1 NOMINAL, 2 DEGRADED, 3 HALTED.
+    % plantMode codes: 0 STARTUP, 1 RUNNING, 2 DEGRADED, 3 HALTED.
+    %
+    % RUNNING means all lines healthy AND material flowing - it is a
+    % health/flow state, not a statement about production RATE (ADR-043).
+    % Time to nominal rate is measured, not read off this signal; see
+    % analysis/utils/gsStartupMetrics.
 
     properties (Constant)
         ModelName = 'BehSupervisor'
         Startup = 0
-        Nominal = 1
+        Running = 1
         Degraded = 2
         Halted = 3
     end
 
     methods (Test)
         function modeSequenceFollowsHealthAndFlow(testCase)
-            % Drive: startup (no flow) -> nominal (flow appears) ->
-            % degraded (line 2 unhealthy) -> recovery to nominal.
+            % Drive: startup (no flow) -> running (flow appears) ->
+            % degraded (line 2 unhealthy) -> recovery to running.
             stopTime = 300;
             % duplicated breakpoints make the stimulus step-like: the
             % ExternalInput matrix is linearly interpolated between rows
@@ -33,14 +38,14 @@ classdef tBehSupervisor < sltest.TestCase
 
             % Sample each phase after its transition should have settled.
             modeAtStartup = plantMode(find(time < 10, 1, 'last'));
-            modeAtNominal = plantMode(find(time >= 10 & time < 100, 1, 'last'));
+            modeAtRunning = plantMode(find(time >= 10 & time < 100, 1, 'last'));
             modeAtDegraded = plantMode(find(time >= 100 & time < 200, 1, 'last'));
             modeAtRecovery = plantMode(end);
 
             testCase.verifyEqual(modeAtStartup, tBehSupervisor.Startup);
-            testCase.verifyEqual(modeAtNominal, tBehSupervisor.Nominal);
+            testCase.verifyEqual(modeAtRunning, tBehSupervisor.Running);
             testCase.verifyEqual(modeAtDegraded, tBehSupervisor.Degraded);
-            testCase.verifyEqual(modeAtRecovery, tBehSupervisor.Nominal);
+            testCase.verifyEqual(modeAtRecovery, tBehSupervisor.Running);
         end
 
         function lineEnableTracksHealth(testCase)

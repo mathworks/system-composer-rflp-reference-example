@@ -51,7 +51,9 @@ Imported into Requirements Toolbox sets: [`../requirements/StakeholderNeeds.slre
 | SR-GS-022 | Cooking capacity | Cook soup at a sustained rate sufficient to meet overall throughput requirements. | SN-GS-011 |
 | SR-GS-023 | Internal transfer time | Transport ingredients from storage to cooking at a rate sufficient to sustain nominal cooking throughput. | SN-GS-012 |
 | SR-GS-024 | Internal transport automation | Internal material transport shall be automated for at least 90% of transfers. | SN-GS-012 |
-| SR-GS-025 | Startup readiness | Reach nominal operating throughput within a defined startup period after activation. | SN-GS-013 |
+| SR-GS-025 | Startup readiness | Reach nominal operating throughput within a defined startup period after activation; decomposed into the two clauses below, both measured from activation of a commissioned plant whose stores hold nominal stock. | SN-GS-013 |
+| SR-GS-025.1 | First soup production | Produce cooked soup at the cook-stage output within 75 minutes of activation. | SN-GS-013 |
+| SR-GS-025.2 | Time to nominal rate | Reach nominal production rate within 120 minutes of activation and sustain it (trailing 5-minute rate ≥ 95% of steady state for a continuous 10-minute dwell). | SN-GS-013 |
 | SR-GS-026 | Fault-induced throughput degradation | Prevent uncontrolled termination of production due to single internal component faults. | SN-GS-014 |
 | SR-GS-027 | Production coordination | Coordinate internal operations to satisfy throughput, safety, and logistical constraints concurrently. | SN-GS-015 |
 | SR-GS-028 | Preparation zone | Include a separate ingredient preparation zone (chopping, weighing) physically isolated from storage and cooking, sustaining prep throughput of at least 200 bowls/hour equivalent. | SN-GS-001 |
@@ -72,7 +74,7 @@ Imported into Requirements Toolbox sets: [`../requirements/StakeholderNeeds.slre
 | SN-GS-010 Ingredient storage | SR-GS-020, SR-GS-021 |
 | SN-GS-011 Cooking infrastructure | SR-GS-022 |
 | SN-GS-012 Internal material transport | SR-GS-023, SR-GS-024 |
-| SN-GS-013 Operational lifecycle | SR-GS-025 |
+| SN-GS-013 Operational lifecycle | SR-GS-025 (with children SR-GS-025.1, SR-GS-025.2) |
 | SN-GS-014 Fault tolerance | SR-GS-026 |
 | SN-GS-015 System coordination | SR-GS-027 |
 

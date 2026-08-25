@@ -15,7 +15,8 @@ function results = runAllTests(tier)
 %   requirement verification.
 %
 %   A full run ends with a PER-VARIANT REQUIREMENTS COVERAGE summary
-%   over all 28 system requirements (ADR-035): no variant is committed
+%   over all 30 system requirements, counting SR-GS-025's two child
+%   clauses (ADR-035): no variant is committed
 %   as baseline, so status is attributed per candidate architecture -
 %   Implement links by their source model, Verify links by the variant
 %   each test case simulates (case names lead with the variant), with
@@ -96,10 +97,13 @@ if fullRun
 
     % each variant's verified-SR set is a contract: a Verify link added
     % or dropped anywhere must be a conscious edit here
+    % SR-GS-025 split into .1 (first soup) / .2 (nominal rate) per ADR-041;
+    % LeanBroth verifies both - startup readiness is independent of the
+    % throughput floor it fails, and it now carries its own evidence
     expected = { ...
-        ["SR-GS-001","SR-GS-002","SR-GS-006","SR-GS-007","SR-GS-015","SR-GS-018","SR-GS-021","SR-GS-025"], ...
-        ["SR-GS-006","SR-GS-021"], ...
-        ["SR-GS-001","SR-GS-002","SR-GS-006","SR-GS-007","SR-GS-008","SR-GS-018","SR-GS-021","SR-GS-025","SR-GS-026"]};
+        ["SR-GS-001","SR-GS-002","SR-GS-006","SR-GS-007","SR-GS-015","SR-GS-018","SR-GS-021","SR-GS-025.1","SR-GS-025.2"], ...
+        ["SR-GS-006","SR-GS-021","SR-GS-025.1","SR-GS-025.2"], ...
+        ["SR-GS-001","SR-GS-002","SR-GS-006","SR-GS-007","SR-GS-008","SR-GS-018","SR-GS-021","SR-GS-025.1","SR-GS-025.2","SR-GS-026"]};
     gaps = { ...
         'fails SR-GS-026 (single-string collapse, 0% retention)', ...
         'fails SR-GS-002 (196.8 bph), SR-GS-018 (+41.5 s), SR-GS-026 (0% retention)', ...

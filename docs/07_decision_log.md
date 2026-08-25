@@ -399,3 +399,77 @@ A new `BayStatusBus` interface carries the rolled-up status. It has `StatusBus`'
 **The headline result is that HyperCook lost its power gate.** It was running at 498.0 kW of a 500 kW cap; six concentrators at 0.4 kW put it at 500.4. The formal gate goes 21/24 → **20/24**, and HyperCook now fails Power as well as Cost and Volume. EverSimmer absorbs its three concentrators with 14.6 kCredits of cost margin left and remains the only gate-compliant variant, so the selection is unchanged — but the margin that survived ADR-032 is now visibly thinner. Goldens rebaselined in `tRollupInvariants` and `tGateAgreement` with the pre-change values preserved in comments; suite green.
 
 **Two API findings, both of which cost real time.** First, **System Composer's architecture-level rewiring is unusable on an existing model in R2026a**: `Connector.destroy` leaves the port in a state `connect()` will not reconnect — not even back to exactly where it came from — and `connect()` signals refusal by returning an *empty connector array* rather than erroring, so a first cut of this change produced a model full of silently disconnected ports that only `model_check` noticed. The working approach is to rewire at the Simulink layer (`delete_line` / `add_line` on the ports' `SimulinkHandle`s), which System Composer then picks up as connectors; `ComponentPort.destroy` additionally errors outright, so controller ports must be removed via the *architecture* port inside the component. Second, `blkOf` returns whichever element reader on a bus port it finds first, so once a port has more than one reader the name must be given explicitly — feeding a scalar power reader to the supervisor's 4-wide health input failed only at diagram update, several steps from the mistake. **Never call `connect()` without asserting on its return value.**
+
+## ADR-040: Startup measured as two metrics, with a dwell band for "nominal"
+
+**Context.** SR-GS-025 asks the plant to "reach nominal operating throughput within a defined startup period." The behavioral layer answered it with one number — `TimeToFirstOut_s`, the first packaged bowl at the root port — and the system tests checked that number against a 3600 s cap. Two things were wrong with that. First, first output is not nominal rate: HyperCook packages its first bowl at 119 s but does not hold its nominal rate until 817 s, so the reported number understated the real commissioning time by a factor of seven. Second, "first output" hid where the time actually goes. For the batch variants nearly the entire startup is the first cook cycle, not the pipeline downstream of it, and a packaged-output metric cannot show that because it measures the far end of both.
+
+**Decision.** Report three separate times from one cold-start run, extracted by a single shared function, [`analysis/utils/gsStartupMetrics.m`](../analysis/utils/gsStartupMetrics.m):
+
+- **`TimeToFirstSoup_s`** — cooked soup exists at the cook-stage output. Requires a new logged signal: `soupFlow_bps` at the soup merge point inside HyperCook's and LeanBroth's QC components, and `soupFlow_Cell1..3` for EverSimmer, whose three cells never merge before packaging.
+- **`TimeToFirstOut_s`** — the first packaged bowl, retained as the pipeline-lag companion to the above.
+- **`TimeToNominal_s`** — the plant reaches *and holds* nominal rate: the first instant at which the trailing 5-minute production rate is at or above 95% of steady state and stays there for a continuous 10-minute dwell.
+
+Nominal uses a **forward dwell band, not a first crossing**, and the rate it is applied to is a trailing integral difference rather than an instantaneous flow — what an operator reads off a shift counter. A dwell window that would run past the end of the record does not qualify, so a too-short run reports `NaN` rather than a flattering number.
+
+Measured on these three designs, **the dwell and a plain first crossing give exactly the same answer** — 817 / 3757 / 3758 s either way. The trailing 5-minute window already absorbs the batch drain spikes that would have made an instantaneous-flow first-crossing test fire early, so the guard is currently inert. It is kept because it is what makes "reach *and hold*" mean what it says, and because it costs nothing: a design with a longer batch cycle, a slower downstream stage, or a coarser rate window could ring past the band without holding it, and the definition should not have to be revisited when that happens.
+
+`gsStartupMetrics` is called by `runBehavioralAnalysis`, `runStartupStudy`, and the `StartupReadiness` test criteria. That is the point: three consumers cannot report different startup times for the same run.
+
+**Status.** Accepted.
+
+**Consequences.** The startup picture is now legible, and two findings came out of it that the single number could not have shown.
+
+The first is where the time goes. Of LeanBroth's 57.0 minutes to first soup, only 20 seconds are QC and packaging; EverSimmer's split is 56.5 minutes and 46 seconds. Essentially all of the batch variants' startup is getting the first batch cooked — accumulating a full charge at prep rate, then fill, heat, and simmer. Buffering or parallelising anything downstream of the vats buys nothing at startup; a hot start, a partial first batch, or a staggered cell start are the levers that would.
+
+The second is that **the supervisor's mode was named for a promise it does not make**. `BehSupervisor` transitioned Startup→`Nominal` on `[outFlow > 0.001]` — any material flowing — so all three variants entered it within 2 s of activation - EverSimmer a full 56 minutes before any soup existed at all. This was resolved by ADR-043, which renames the state to `Running` (availability, not rate) without touching a transition condition or a numeric code; `gsStartupMetrics` reports `TimeToModeRunning_s` alongside the measured settle so the two quantities stay visibly distinct. The end-of-run mode assertions in the fault suite are unaffected — they check steady state, not a transition time.
+
+## ADR-041: SR-GS-025 carries numeric caps and decomposes into two verifiable clauses
+
+**Context.** Every quantitative requirement in this project carries its cap in the requirement text, where `gsParseBudgetValue` reads it — mass, power, cost, volume, throughput, operators, transport latency, turnaround, endurance. Startup readiness has to work the same way, or the number the tests enforce lives in the test code and can drift from the requirement with no artifact disagreeing. And per ADR-040 startup readiness is not one question: "when does soup first exist" and "when is the plant holding its nominal rate" are separable events, minutes to an hour apart depending on the architecture, and a single clause verified by a single check cannot speak to both.
+
+**Decision.** SR-GS-025 keeps its system-wide scope and decomposes into two children, each independently verifiable:
+
+| Id | Clause | Cap |
+|---|---|---|
+| SR-GS-025.1 | First soup produced at the cook-stage output | 75 minutes from activation |
+| SR-GS-025.2 | Nominal production rate reached and sustained | 120 minutes from activation |
+
+Both descriptions **lead with their numeric cap**, because `gsParseBudgetValue` returns the *first* number in the text — SR-GS-025.2's definition of nominal ("95 percent... for a continuous 10-minute dwell") deliberately follows the cap for that reason. This is a real constraint on how the prose may be written, and it fails silently: a later edit that mentions any other quantity first changes the cap every consumer enforces, with no error anywhere. Requirement text that is meant to be machine-read has to be written cap-first.
+
+The caps are stakeholder-facing commitments traced to SN-GS-013, not fitted to what the current variants achieve, and they are deliberately generous — the engineering question here is *how long does startup take*, not *which variant fails a startup gate*.
+
+The parent requirement also states the measurement precondition, which a startup requirement is meaningless without: startup is measured from activation of a commissioned plant whose ingredient stores hold their nominal starting stock. See ADR-042 for how much that assumption is worth.
+
+**Status.** Accepted.
+
+**Consequences.** The startup caps live in exactly one place and are parsed everywhere they are used — the sweep, the test generator, and the test criteria. The `StartupReadiness` suite carries one case per variant; **LeanBroth is linked there**, because startup readiness is independent of the throughput floor it fails, and per ADR-035 each candidate's evidence stands on its own terms. All three variants meet both clauses: first soup at 0.3 / 57.0 / 56.5 minutes and nominal rate at 13.6 / 62.6 / 62.6 minutes for HyperCook / LeanBroth / EverSimmer.
+
+Counting the two child clauses, the requirement set is 30 rather than 28, which sets the denominator in every coverage summary. `SystemRequirements.slreqx` is the authority for the requirement set; a re-import from the source spreadsheet has to carry SR-GS-025's decomposition or it will drop it.
+
+## ADR-042: Startup is measured from a stocked larder, and the assumption is swept
+
+**Context.** ADR-040's startup numbers are measured from `t = 0` of a nominal simulation, and at `t = 0` every variant's ingredient stores are already holding stock — `HC_StorageInit_bowls` 1500, `LB_StorageInit_bowls` 600, `ES_StorageInit_bowls` 900, set in [`behavior/build/setupBehaviorData.m`](../behavior/build/setupBehaviorData.m). Inter-stage surge tanks do start empty, but the main stores do not. "Time from off" therefore excluded any time spent filling the larder, and nothing in the requirement, the analysis, or the tests said so. An unstated initial condition that flatters a reported number is exactly the kind of thing that survives into a design review unchallenged.
+
+**Decision.** State the assumption in the requirement text (ADR-041) and quantify its effect rather than argue about it: [`analysis/sweeps/runStartupStudy.m`](../analysis/sweeps/runStartupStudy.m) sweeps stock at activation over 0, 0.5, 1, and 2 times each variant's default and reports all three startup times at every point. The 0x point is the honest cold case — an empty larder at activation, production limited by the resupply rate until the stores fill.
+
+Gravity is deliberately not a second axis here. `runGravitySweep` already covers the required range, and the batch drain time it moves (ADR-026) reaches these metrics through the same vat cycle.
+
+**Status.** Accepted.
+
+**Consequences.** Twelve four-hour simulations, making this the longest-running script in `analysis/sweeps`; `runStartupStudy('figures')` redraws from the saved results without re-simulating. The result is a negative one, which is the useful kind here: **the assumption does not flatter the numbers.** Starting from a completely empty larder costs 36 s on HyperCook, 32 s on LeanBroth, and 14 s on EverSimmer — under a minute in every case, with no difference at all between half and double stock. The claim holds in absolute terms rather than proportionally: that same 36 s is 4.4% of HyperCook's short 13.6-minute startup against 0.9% of LeanBroth's hour. Resupply flows from `t = 0` at a rate already exceeding what prep can draw, so the stores are never the binding constraint during startup; the clock is set by prep accumulating a full vat charge and then by the fill-heat-simmer cycle. An empty larder matters to endurance (SR-GS-021, ADR-030/-032), not to startup. Full results in [`20_startup_transient.md`](20_startup_transient.md) §4.
+
+
+## ADR-043: Name the supervisor mode for what it is
+
+**Context.** `BehSupervisor`'s second plant mode was called `Nominal`, and the startup metric that reports when it is entered was called `TimeToModeNominal_s`. Read alongside SR-GS-025 ("reach nominal operating throughput"), that names a readiness signal. It is not one. The transition into the state is `[outFlow > 0.001]` — any material flowing at all — and the states around it, `Degraded` and `Halted`, are health states keyed on `sum(health > 0.5)`. The mode axis is availability, not production rate.
+
+The gap that misreading would have cost is not small: all three variants enter the state within 2 s of activation, EverSimmer a full 56 minutes before any soup exists, against measured times to nominal rate of 13.6 / 62.6 / 62.6 minutes.
+
+**Decision.** Rename the mode `Nominal` → `Running` (`PLANT_NOMINAL` → `PLANT_RUNNING`) in the Stateflow chart, the `BehaviorInterfaces` dictionary, and every consumer; `gsStartupMetrics` reports `TimeToModeRunning_s`. `Running` states the actual predicate — all lines healthy and material flowing — and sits honestly beside `Degraded` and `Halted` on the availability ladder it belongs to.
+
+**No behavior changes.** Transition conditions, numeric codes, and every mode-based assertion are untouched. The discrepancy this removes was always between a name and a meaning, never a defect in the supervisor: it was reporting exactly what it measured, under a label that promised something else.
+
+**Status.** Accepted.
+
+**Consequences.** Rate readiness is measured from the output (ADR-040) and never read off the telemetry, and `tStartup/runningModeIsNotRateReadiness` pins the gap between the two events so they cannot quietly converge in a reader's head again. What remains true is that **no signal in the plant reports rate readiness** — adding one would be a supervisory-control design change rather than a measurement one, and is deliberately not attempted here.

@@ -36,7 +36,7 @@ The Simulink Test file gains a `GravityExtremes` suite and richer nominal criter
 | SR | Verified by | How |
 |---|---|---|
 | SR-GS-015 (gravity range) | HyperCook at 0.1 g + at 12 g | Floor check with `Gravity_g` parameter overrides; only HyperCook links, per the Verify-link semantics rule. EverSimmer's 0.1 g case stays an unlinked regression baseline (189.3 band) documenting the hole. |
-| SR-GS-025 (startup readiness) | HC + ES nominal | First packaged output within the defined 3600 s startup period (HC: ~2 min; ES: ~50 min). |
+| SR-GS-025 (startup readiness) | HC + ES nominal | First packaged output within a 3600 s startup period (HC: ~2 min; ES: ~50 min). **Superseded by ADR-040/-041**: the requirement is now split into SR-GS-025.1/.2 and verified by the `StartupReadiness` suite for all three variants against caps parsed from the requirement — see [`20_startup_transient.md`](20_startup_transient.md). |
 | SR-GS-008 (serving temperature) | ES nominal | Vat temperature sampled *while draining* (state == `VAT_DRAIN`, via logged `vatTemp_Cell1`/`vatState_Cell1` signals) must sit in 70–95 °C. |
 
 **Finding 2: the vat targeted the top of the serving band.** The first run of the SR-GS-008 criterion failed: serving temperature reached 95.23 °C. The design had `SimmerTemp_C = 95` — the band edge — and the bang-bang heater's ±0.5 °C ripple carried drain-onset temperature past the limit. The fix is design margin, not test tolerance: target 94 °C, serve at 92.5–94.2 °C. Cycle-time impact is ~3 s in ~1,860 (all throughput baselines hold to the displayed digit). This is the golden-values philosophy meeting requirements verification: the criterion refused to vouch for a band-edge design, and the requirement pushed a real margin decision back into the model.

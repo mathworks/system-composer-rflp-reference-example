@@ -14,11 +14,16 @@ function buildSystemTestFile()
 %   requirement (or has none to satisfy) and stay unlinked.
 %
 %   Nominal suite - steady throughput and plant mode via custom criteria:
-%     HC/ES verify SR-GS-002 (floor) and SR-GS-025 (first packaged
-%     output within the 3600 s startup period); ES additionally verifies
-%     SR-GS-008 (vat serves from the simmer band, never exceeding 95 C).
+%     HC/ES verify SR-GS-002 (floor); ES additionally verifies SR-GS-008
+%     (vat serves from the simmer band, never exceeding 95 C).
 %     LB genuinely fails the floor (196.8 bph) - baselined unlinked;
 %     that story belongs to the compliance gate.
+%   StartupReadiness suite - SR-GS-025.1 (first soup at the cook stage)
+%     and SR-GS-025.2 (sustained nominal rate), caps parsed from the
+%     requirement text. All three variants get a case: startup is
+%     independent of whether a variant clears the throughput floor, so
+%     LeanBroth carries its own startup evidence here even though its
+%     nominal case is an unlinked baseline (ADR-035, ADR-041).
 %   WorstFault suite - Fault_T_* parameter overrides at t = 7200 s:
 %     ES verifies SR-GS-026 (retention ~2/3, Degraded mode); HC/LB
 %     baseline their 0% collapse unlinked.
@@ -47,7 +52,9 @@ slreq.clear();
 srSet = slreq.load(fullfile(char(proj.RootFolder), 'requirements', 'SystemRequirements.slreqx'));
 
 % purge stale Verify links from earlier builds of this artifact
-for id = {'SR-GS-002','SR-GS-026','SR-GS-008','SR-GS-015','SR-GS-025','SR-GS-007','SR-GS-006','SR-GS-001','SR-GS-018','SR-GS-021'}
+for id = {'SR-GS-002','SR-GS-026','SR-GS-008','SR-GS-015','SR-GS-025', ...
+          'SR-GS-025.1','SR-GS-025.2','SR-GS-007','SR-GS-006','SR-GS-001', ...
+          'SR-GS-018','SR-GS-021'}
     sr = find(srSet, 'Id', id{1});
     for L = inLinks(sr)
         try
@@ -86,9 +93,6 @@ harvest = [ ...
     'end\n'];
 % reusable criterion fragments
 floorFrag = sprintf('test.verifyGreaterThanOrEqual(bph, 200, ''SR-GS-002 floor'');%s', newline);
-% SR-GS-025: packaged output must appear within the defined 3600 s startup period
-startupFrag = sprintf(['tfirst = flow.Time(find(flow.Data > 1e-3, 1));\n' ...
-    'test.verifyLessThanOrEqual(tfirst, 3600, ''SR-GS-025 startup period'');\n']);
 % SR-GS-008: soup temperature while the vat is DRAINING (i.e. serving)
 % must sit inside the required 70-95 C window; the transient simmer
 % overshoot (~95.5 C, bang-bang control) is not serving temperature
@@ -103,9 +107,9 @@ tempFrag = sprintf(['lg = test.sltest_simout.get(''logsout'');\n' ...
 
 % {name, model, steady bph, extraFrags, links}
 nom = { ...
- 'HyperCook nominal',  'PhysicalHyperCook',  308.4, [floorFrag startupFrag], {'SR-GS-002','SR-GS-025'}; ...
+ 'HyperCook nominal',  'PhysicalHyperCook',  308.4, floorFrag, {'SR-GS-002'}; ...
  'LeanBroth nominal - regression baseline', 'PhysicalLeanBroth', 196.8, '', {}; ...
- 'EverSimmer nominal', 'PhysicalEverSimmer', 231.9, [floorFrag startupFrag tempFrag], {'SR-GS-002','SR-GS-025','SR-GS-008'}};
+ 'EverSimmer nominal', 'PhysicalEverSimmer', 231.9, [floorFrag tempFrag], {'SR-GS-002','SR-GS-008'}};
 for i = 1:size(nom,1)
     tc = createTestCase(suites(1), 'simulation', nom{i,1});
     setProperty(tc, 'Model', nom{i,2});
@@ -119,8 +123,53 @@ for i = 1:size(nom,1)
         'bph = trapz(flow.Time(sel), flow.Data(sel))/(flow.Time(end)-7200)*3600;\n' ...
         '%s' ...
         'test.verifyEqual(bph, %g, ''AbsTol'', 3, ''regression band'');\n' ...
-        'test.verifyEqual(double(mode.Data(end)), 1, ''Nominal mode'');\n'], ...
+        'test.verifyEqual(double(mode.Data(end)), 1, ''Running mode'');\n'], ...
         nom{i,4}, nom{i,3});
+end
+
+% --- StartupReadiness suite: SR-GS-025.1 / SR-GS-025.2 ---
+% The requirement asks two questions one number cannot answer: when does
+% soup first EXIST (cook stage), and when does the plant reach and HOLD
+% its nominal rate. Both come from gsStartupMetrics - the same function
+% runBehavioralAnalysis and runStartupStudy call, so evidence and
+% analysis cannot report different numbers for the same run. Caps are
+% parsed from the requirement text (ADR-041), never hardcoded here.
+capSoup_s = gsParseBudgetValue(srSet, 'SR-GS-025.1') * 60;
+capNom_s  = gsParseBudgetValue(srSet, 'SR-GS-025.2') * 60;
+startSuite = createTestSuite(tf, 'StartupReadiness');
+for stray = getTestCases(startSuite)
+    remove(stray);
+end
+startFrag = [ ...
+    'lg = test.sltest_simout.get(''logsout'');\n' ...
+    'nm = string(lg.getElementNames());\n' ...
+    'if any(nm == "soupFlow_bps")\n' ...
+    '    soup = lg.get(''soupFlow_bps'').Values;\n' ...
+    'else\n' ...
+    '    cs = nm(startsWith(nm, "soupFlow_Cell"));\n' ...
+    '    soup = lg.get(char(cs(1))).Values;\n' ...
+    '    for q = 2:numel(cs)\n' ...
+    '        soup = soup + resample(lg.get(char(cs(q))).Values, soup.Time);\n' ...
+    '    end\n' ...
+    'end\n' ...
+    'sm = gsStartupMetrics(struct(''flow'',flow,''soup'',soup,''mode'',mode,' ...
+    '''power'',power), struct(''SteadyStart_s'',7200));\n' ...
+    'test.verifyLessThanOrEqual(sm.TimeToFirstSoup_s, %g, ''SR-GS-025.1 first soup'');\n' ...
+    'test.verifyLessThanOrEqual(sm.TimeToNominal_s, %g, ''SR-GS-025.2 nominal rate'');\n'];
+% {name, model, links}
+stp = { ...
+ 'HyperCook startup',  'PhysicalHyperCook',  {'SR-GS-025.1','SR-GS-025.2'}; ...
+ 'LeanBroth startup',  'PhysicalLeanBroth',  {'SR-GS-025.1','SR-GS-025.2'}; ...
+ 'EverSimmer startup', 'PhysicalEverSimmer', {'SR-GS-025.1','SR-GS-025.2'}};
+for i = 1:size(stp,1)
+    tc = createTestCase(startSuite, 'simulation', stp{i,1});
+    setProperty(tc, 'Model', stp{i,2});
+    setProperty(tc, 'HarnessOwner', stp{i,2}, 'HarnessName', hmap(stp{i,2}));
+    setProperty(tc, 'OverrideStopTime', true);
+    setProperty(tc, 'StopTime', 14400);
+    cc = getCustomCriteria(tc);
+    cc.Enabled = true;
+    cc.Callback = sprintf([harvest startFrag], capSoup_s, capNom_s);
 end
 
 % --- Gravity suite: SR-GS-015 extremes (0.1 g and 12 g) ---
@@ -404,7 +453,7 @@ end
 % save FIRST so cases carry persistent IDs, then link (links made against
 % unsaved cases capture provisional IDs and never match executed results)
 saveToFile(tf);
-linkSpec = [nom(:,[1 5]); flt(:,[1 6]); grv(:,[1 6]); ctm(:,[1 4]); trn(:,[1 4]); rcp(:,[1 5]); rkt(:,[1 5]); edu(:,[1 6])];
+linkSpec = [nom(:,[1 5]); stp(:,[1 3]); flt(:,[1 6]); grv(:,[1 6]); ctm(:,[1 4]); trn(:,[1 4]); rcp(:,[1 5]); rkt(:,[1 5]); edu(:,[1 6])];
 nLinks = 0;
 for s = getTestSuites(tf)
     for tc = getTestCases(s)
@@ -422,5 +471,5 @@ saveToFile(tf);
 slreq.saveAll();
 pf = {proj.Files.Path};
 if ~any(strcmpi(pf, tfPath)), addFile(proj, tfPath); end
-fprintf('%s built: 22 cases, %d Verify links\n', tfPath, nLinks);
+fprintf('%s built: 25 cases, %d Verify links\n', tfPath, nLinks);
 end
