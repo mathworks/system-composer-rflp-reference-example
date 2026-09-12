@@ -2,7 +2,7 @@
 
 Branch exploration: reorganizing analysis verification as a tagged MATLAB Test suite. Every quantitative claim the analysis chain makes — golden roll-up totals, gate verdicts, MCDA determinism, traceability integrity, simulated system behavior — now has a test that baselines it independently of the code that produces it, rather than an assertion buried inside a script that only fails if someone happens to run that script and read its output.
 
-Artifacts: [`../tests/`](../tests/) (six test classes, `runAllTests.m`), [`../behavior/tests/`](../behavior/tests/) (the pre-existing 21 component unit tests, unchanged, folded into the same suite). Decision: ADR-021 in [`07_decision_log.md`](07_decision_log.md).
+Artifacts: [`../tests/`](../tests/) (analysis tests, system tests, and `runAllTests.m`), [`../behavior/tests/`](../behavior/tests/) (a 21-case Simulink Test component file, deterministic generator, shared inputs, and reviewed waveform baselines folded into the same suite). Decision: ADR-021 in [`07_decision_log.md`](07_decision_log.md).
 
 ## 1. Why organize analysis as tests
 
@@ -12,11 +12,11 @@ The fix is to say the expectations out loud, as tests, separately from the code 
 
 ## 2. The four tiers
 
-`GalacticSoup/tests/` holds four new tiers, distinguished by `matlab.unittest.TestTags`, on top of the pre-existing component tier in `behavior/tests/` (untagged — legacy, selected by folder membership rather than a tag, and left as-is: all 21 methods still pass unchanged).
+`GalacticSoup/tests/` holds the analysis, traceability, and system tiers. The component tier remains in `behavior/tests/` as one native Simulink Test file; its 21 cases carry the `'behavior'` tag so they can be selected through the same runner.
 
 | Tier | Tag | Classes | What breaks it |
 |---|---|---|---|
-| Component | *(untagged)* | 7 classes in `behavior/tests/` (`tBehStorage` … `tBehSupervisor`), 21 test methods | Any regression in a behavioral component's simulated response — unchanged from [`09_behavioral_models.md`](09_behavioral_models.md) §7. |
+| Component | `'behavior'` | 7 suites / 21 cases in `behavior/tests/BehaviorComponentTests.mldatx` | Scalar/invariant criteria moving out of tolerance, or a nominal output waveform moving outside its reviewed signal-specific value/time tolerance. See [`09_behavioral_models.md`](09_behavioral_models.md) §7. |
 | Analysis | `'analysis'` | `tRollupInvariants`, `tGateAgreement`, `tTradeDeterminism` | Golden roll-up totals (mass/power/cost/volume) drifting per variant; budget caps parsed from requirement text changing; the `Compliant` flag disagreeing with its own eight gate flags; the formal gate's 23/24 verdict pattern moving off "LeanBroth throughput fails, and nothing else does"; the seeded MCDA losing bit-for-bit reproducibility, or EverSimmer no longer winning every named scenario and its baselined 98.42% Monte Carlo win share. |
 | Traceability | `'traceability'` | `tTraceability` | Any of the 36 requirement links failing to resolve to a live architecture element, a link source landing outside its expected model, a link destination no longer matching an `SR-GS-*` id, the per-model link counts (10/10/16 for HyperCook/LeanBroth/EverSimmer) changing, or an allocation set losing members — `LogicalToEverSimmer` is baselined at 24 allocations. |
 | System | `'system'` | `tSystemNominal`, `tSystemFault` | A physical architecture model's simulated steady-state packaged throughput drifting outside its tolerance band (308.4 / 196.8 / 231.9 bph for HyperCook / LeanBroth / EverSimmer), a plant not ending a clean run in `Nominal` mode, worst-single-fault retention drifting (0 / 0 / 0.672), or EverSimmer's supervisor failing to report `Degraded` under its cell fault. |
@@ -25,16 +25,17 @@ Each tier maps to an existing analysis document: the analysis tier baselines val
 
 ## 3. Suite assembly and running it
 
-Suite membership is project metadata, not a hard-coded file list: every test file (the four new classes' folder plus the pre-existing `behavior/tests/`) carries the MATLAB project's `Test` classification label, and `matlab.unittest.TestSuite.fromProject(currentProject)` discovers all of them — 37 tests in total (21 component + 16 across the four new tiers). Adding a test file to the project and labeling it `Test` is enough to fold it into the suite; nothing needs to be registered by path.
+Suite membership is project metadata, not a hard-coded file list: every MATLAB test class and both Simulink Test files carry the MATLAB project's `Test` classification label, and `matlab.unittest.TestSuite.fromProject(currentProject)` discovers all 81 current tests (21 behavioral component cases, 25 system cases, and 35 MATLAB tests across the other tiers). Adding a test file to the project and labeling it `Test` is enough to fold it into the suite. The component generator, runner, shared Dataset input, and 21 committed waveform baselines are also registered with the project under the `Design` classification, but are not themselves suite members.
 
 `tests/runAllTests.m` wraps suite assembly, tag filtering, and a coverage plugin:
 
 ```
 runAllTests()            % entire suite: component + analysis + traceability + system
+runAllTests("behavior")  % 21 behavioral component tests
 runAllTests("system")    % one tier only, by tag
 ```
 
-It runs with `matlab.unittest.TestRunner.withTextOutput`. An earlier version attached a `CodeCoveragePlugin` over the analysis code, but line coverage of scripts exercised by the very tests being run proved circular rather than informative and was removed (ADR-023) — full runs now end with a *requirements coverage* summary instead: implemented / gate-checked / test-verified counts over all 30 SRs, with the formal document version generated by `analysis/reporting/makeRequirementsReport`. `assertSuccess` on the result means a non-zero exit is available to any CI wrapper that wants one, though this project runs the suite interactively today.
+It runs with `matlab.unittest.TestRunner.withTextOutput`. The component tier also has `runBehTests()` for a direct Test Manager run and `runBehTests("view")` to leave Test Manager open on the result, where output traces, assessment details, and native baseline comparisons can be inspected without generating a separate report. Reviewed baselines remain in project-registered `behavior/tests/baselines/` and can only be replaced explicitly with `updateBehaviorBaselines(true)`. An earlier version attached a `CodeCoveragePlugin` over the analysis code, but line coverage of scripts exercised by the very tests being run proved circular rather than informative and was removed (ADR-023) — full runs now end with a *requirements coverage* summary instead: implemented / gate-checked / test-verified counts over all 30 SRs, with the formal document version generated by `analysis/reporting/makeRequirementsReport`. `assertSuccess` on the result means a non-zero exit is available to any CI wrapper that wants one, though this project runs the suite interactively today.
 
 One chain-hygiene fix made running tiers back-to-back reliable: `runComplianceGate.m` now closes the `GalacticSoupComplianceGate` model on exit. Previously, the model stayed loaded after a gate run, and its embedded requirement set then blocked `slreq.clear` for any code that ran afterward in the same session — a documented gotcha ([`08_formal_compliance_gate.md`](08_formal_compliance_gate.md) §5) that the analysis and traceability tests now trip over directly, since both the analysis tier (which runs the gate) and the traceability tier (which calls `slreq.clear` before loading each model's link set) can land in the same session. `tRollupInvariants` and `tTraceability` additionally close the gate model defensively in their own class setup, in case it was left open by something outside the suite.
 
@@ -52,4 +53,4 @@ The practical consequence: linking tests to requirements for verification-status
 
 ## 6. Runtime
 
-The full suite (`runAllTests()`, all 37 tests) takes about 2.5 minutes. The system tier dominates: `tSystemNominal` and `tSystemFault` together simulate all three physical architecture models twice each (once nominal, once with a fault injected at 7,200 s, run out to 14,400–21,600 s of simulated time) — six full architecture simulations, against which the component, analysis, and traceability tiers are comparatively instantaneous. Running a single tier via `runAllTests("analysis")` or similar is the faster inner loop when iterating on roll-up, gate, or trade-study logic without needing a full system re-simulation.
+The full suite (`runAllTests()`, currently 81 tests) is dominated by the system tier. The component tier takes about one to two minutes because all 21 cases perform full-waveform comparisons as well as scalar behavioral checks. Running a single tier via `runAllTests("behavior")`, `runAllTests("analysis")`, or similar remains the faster inner loop when a full system re-simulation is unnecessary.

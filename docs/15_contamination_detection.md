@@ -2,7 +2,7 @@
 
 Branch exploration: `contamination_ppm` had ridden along on the `SoupStream` bus since the bus was first defined, wired to a constant 0 at every producer and read by nothing downstream — a signal shaped like a requirement with no behavior behind it. SR-GS-007 requires contamination detection before sealing at 99% sensitivity or better, and the QC station that should have been doing that detection had never been asked to. This branch gives `BehQCStation` an actual contamination model, sweeps the incidence rate the requirement has to hold across, and converts SR-GS-007 from unexercised to verified-by-executed-test.
 
-Artifacts: the two new model arguments and outports on the shared QC library model, instance-parameter wiring in [`../behavior/build/buildInlineBehaviors.m`](../behavior/build/buildInlineBehaviors.m), [`../analysis/sweeps/runContaminationSweep.m`](../analysis/sweeps/runContaminationSweep.m), [`../behavior/tests/tBehQCStation.m`](../behavior/tests/tBehQCStation.m) and [`../tests/analysis/tContamination.m`](../tests/analysis/tContamination.m), the `Contamination` suite in [`../tests/system/GalacticSoupSystemTests.mldatx`](../tests/system/GalacticSoupSystemTests.mldatx). Decision: ADR-027 in [`07_decision_log.md`](07_decision_log.md).
+Artifacts: the two new model arguments and outports on the shared QC library model, instance-parameter wiring in [`../behavior/build/buildInlineBehaviors.m`](../behavior/build/buildInlineBehaviors.m), [`../analysis/sweeps/runContaminationSweep.m`](../analysis/sweeps/runContaminationSweep.m), the QCStation suite in [`../behavior/tests/BehaviorComponentTests.mldatx`](../behavior/tests/BehaviorComponentTests.mldatx), [`../tests/analysis/tContamination.m`](../tests/analysis/tContamination.m), and the `Contamination` suite in [`../tests/system/GalacticSoupSystemTests.mldatx`](../tests/system/GalacticSoupSystemTests.mldatx). Decision: ADR-027 in [`07_decision_log.md`](07_decision_log.md).
 
 ## 1. The stubbed signal nobody read
 
@@ -58,7 +58,7 @@ The `Contamination` suite in `GalacticSoupSystemTests.mldatx` adds two cases, bo
 
 LeanBroth gets neither a case nor a link, per the Verify-link semantics rule from doc 12 §3: LeanBroth's nominal throughput already sits below the SR-GS-002 floor, so a passing contamination case on top of an already-noncompliant baseline would not demonstrate SR-GS-007 being genuinely met in a shippable configuration. LeanBroth's numbers are still worth protecting — they're covered by the sweep in §3, which baselines them as a regression baseline without asserting requirement satisfaction.
 
-Below the suite, `tBehQCStation.m` gains a component-level contamination method that checks the exact split ratios (`detected`/`contam`, `escaped`/`contam`) on the library model directly, isolated from the physical-variant simulations. `tContamination.m`, in the analysis tier, baselines the sweep results from §3 and the sensitivity-margin conclusion (0.995 design vs. 0.99 floor) as golden values.
+At the component level, the QCStation `contaminationDetectionSplit` case checks the exact split ratios (`detected`/`contam`, `escaped`/`contam`) on the library model directly, isolated from the physical-variant simulations. `tContamination.m`, in the analysis tier, baselines the sweep results from §3 and the sensitivity-margin conclusion (0.995 design vs. 0.99 floor) as golden values.
 
 With these two cases linked, the verified-by-test count in the requirements coverage summary grows from 5 to 6 of 28.
 

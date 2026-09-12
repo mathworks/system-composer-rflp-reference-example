@@ -88,18 +88,19 @@ Collected here because most of them cost real debugging time and generalize past
 [`runAllTests.m`](../tests/runAllTests.m) is still the single entry point (ADR-021), extended rather than replaced:
 
 ```
-results = runAllTests()            % all 37: MATLAB tiers + simulation cases, one suite
+results = runAllTests()            % all project tests, one suite
+results = runAllTests("behavior")  % 21 behavioral component tests
 results = runAllTests("analysis")  % one MATLAB tier by tag
-results = runAllTests("system")    % just the six simulation cases
+results = runAllTests("system")    % just the system simulation cases
 ```
 
-The runner assembles ONE suite: `TestSuite.fromProject(proj)` collects the MATLAB test classes (via their `Test` classification labels) and adapts the `.mldatx` cases into the same suite, and a single `matlab.unittest` runner executes all 37 with the coverage plugin attached. Simulation cases and MATLAB tests appear in the same results table, count in the same pass/fail total, and — the discovery that unlocked this design — register their results for requirement verification identically through the adapter path. No second engine, no filtering, no double run.
+The runner assembles ONE suite: `TestSuite.fromProject(proj)` collects the MATLAB test classes (via their `Test` classification labels) and adapts both `.mldatx` files into the same suite, and a single `matlab.unittest` runner executes all current project tests. Simulation cases and MATLAB tests appear in the same results table, count in the same pass/fail total, and — the discovery that unlocked this design — register their results for requirement verification identically through the adapter path. No second engine, no filtering, no double run.
 
 When called with no argument, `runAllTests` runs the full suite and finishes with the headless verification-rollup recipe from §4, asserting that both SR-GS-002 and SR-GS-026 come back verified-passed. A tier-filtered call selects by `TestTags`; `runAllTests("system")` selects the adapted simulation cases by name, since `.mldatx` cases carry no tags. Tier-filtered runs skip the requirement-set refresh — the fast inner loop for iterating on one tier is unchanged from ADR-021.
 
 ## 7. MATLAB Test vs. Simulink Test, for this project
 
-Both tools stayed. Converting the remaining MATLAB tiers — 21 component tests in `behavior/tests/`, plus the analysis (`tRollupInvariants`, `tGateAgreement`, `tTradeDeterminism`) and traceability (`tTraceability`) tiers — to `sltest.TestCase` subclasses was a one-line superclass change per file; they still run via `runtests`/`fromProject` exactly as before, and gained Test-Manager compatibility for free. Nothing about them needed to become a `.mldatx` case.
+Both tools stayed, but model-simulation tests now use the native format consistently. The 21 behavioral component tests are seven suites in `behavior/tests/BehaviorComponentTests.mldatx`; this gives them Test Manager's retained simulation runs, assessment details, and baseline-comparison views. The analysis and traceability tiers remain direct `sltest.TestCase` subclasses because they test MATLAB data and link structure rather than model dynamics.
 
 | | MATLAB Test (`sltest.TestCase` / `matlab.unittest`) | Simulink Test (`.mldatx`) |
 |---|---|---|
@@ -107,11 +108,11 @@ Both tools stayed. Converting the remaining MATLAB tiers — 21 component tests 
 | Requirement-link integrity (traceability tier) | **Wins.** Same reasoning — the thing under test is link-graph structure, not simulated behavior. | Not applicable. |
 | Golden-value baselining ergonomics | **Wins.** A literal expected value and an `AbsTol` in a `verifyEqual` call, next to the code that produced the number. | Same idiom is available in a custom-criteria callback, but it's a string of MATLAB inside a callback property rather than a method body — more ceremony to read and edit. |
 | Coverage | Code coverage was tried via `CodeCoveragePlugin` and later removed as circular for this project (ADR-023). | The coverage that matters here is *requirements* coverage — driven by the Verify links only Simulink Test cases can carry, summarized by `runAllTests` and reported by `analysis/reporting/makeRequirementsReport`. |
-| Model simulation cases (steady-state throughput, fault injection) | Works — `tSystemNominal`/`tSystemFault` proved this in ADR-021 — but every case is bespoke `sim`/`SimulationInput` scripting. | **Wins.** `simulation` test cases, parameter sets, and `OverrideStopTime` are purpose-built for exactly this; the six cases here are declarative table rows, not scripted `sim` calls. |
+| Model simulation cases (component behavior, steady-state throughput, fault injection) | Works, but every case needs bespoke `sim`/`SimulationInput` scripting and separate result visualization. | **Wins.** Baseline cases, parameter sets, finite stop-time overrides, and retained signal views are purpose-built for this; all 21 component cases and the system cases are persistent Test Manager artifacts. |
 | Parameter-override fault injection | Possible via `SimulationInput.setVariable`, hand-rolled per test. | **Wins.** `addParameterOverride` on a named parameter set is the intended mechanism and reads as data, not code. |
 | Programmatic requirements verification | **Cannot do this.** `slreq.createLink` rejects `matlab.unittest.Test` elements; this was the R2026a limitation recorded in [`11_test_organization.md`](11_test_organization.md) §5 and never resolved for that object type. | **Wins, decisively.** This is the capability that drove the whole branch: `Verify` links from test case to requirement, and `updateVerificationStatus` rolling up real, executed results into the Requirements Editor — headlessly. |
 
-The honest read: this isn't a case where one tool should have replaced the other. MATLAB Test is still the better fit for the four tiers that never touch a running model, and Simulink Test is the only fit for the one tier that does and for the one capability — programmatic requirements verification — that the whole branch was chasing. They compose: MATLAB tiers for logic, one Simulink Test file for simulation and verification, one runner (`runAllTests`) that treats both as a single pass/fail stack. Full stack green today: 31 MATLAB tests plus 6 simulation cases, a coverage report, and SR-GS-002 / SR-GS-026 both verified-passed.
+The honest read: this isn't a case where one tool should replace the other. MATLAB Test remains the better fit for tiers that never touch a running model, while Simulink Test is the better fit for behavioral and system simulation and for programmatic requirements verification. They compose through one runner (`runAllTests`) that treats MATLAB tests and adapted `.mldatx` cases as a single pass/fail stack. The current composition is 35 MATLAB tests plus 46 Simulink Test cases.
 
 
 ## 8. External test harnesses (ADR-033)

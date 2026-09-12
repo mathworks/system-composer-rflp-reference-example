@@ -4,6 +4,7 @@ function results = runAllTests(tier)
 %                                    (component/analysis/traceability)
 %                                    and the Simulink Test simulation
 %                                    cases, one runner, equal citizens
+%   results = runAllTests("behavior")     behavioral component tier
 %   results = runAllTests("analysis")     one MATLAB tier by tag
 %   results = runAllTests("system")       just the simulation cases
 %
@@ -34,16 +35,16 @@ import matlab.unittest.TestRunner
 
 proj = currentProject;
 suite = matlab.unittest.TestSuite.fromProject(proj);
-isSim = contains({suite.Name}, 'GalacticSoupSystemTests');
+isSystem = contains({suite.Name}, 'GalacticSoupSystemTests');
 fullRun = nargin == 0 || isempty(tier);
 if ~fullRun
     if strcmpi(char(tier), 'system')
-        suite = suite(isSim);   % simulation cases carry no TestTags
+        suite = suite(isSystem);   % system cases carry no TestTags
     else
         suite = suite.selectIf(matlab.unittest.selectors.HasTag(char(tier)));
     end
 end
-fprintf('suite: %d tests (%d simulation cases)\n', numel(suite), ...
+fprintf('suite: %d tests (%d system cases)\n', numel(suite), ...
     nnz(contains({suite.Name}, 'GalacticSoupSystemTests')));
 
 runner = TestRunner.withTextOutput('OutputDetail', 1);
