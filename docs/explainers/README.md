@@ -4,8 +4,8 @@ This folder has one plain-language card per analysis case in the trade-study cha
 
 | File | Question it answers | One-line result |
 |---|---|---|
-| [01_static_rollup.md](01_static_rollup.md) | What does each architecture claim on its datasheet? | All three architectures fit their budgets on paper — but paper assumes nothing ever goes wrong. |
+| [01_static_rollup.md](01_static_rollup.md) | What does each architecture claim on its datasheet? | HyperCook already exceeds its power, cost, and volume caps on paper. |
 | [02_nominal_simulation.md](02_nominal_simulation.md) | What does each architecture actually produce when the soup flows? | Every variant makes less soup than its datasheet promised, and LeanBroth loses the most. |
 | [03_fault_simulation.md](03_fault_simulation.md) | What happens to production when the worst single component dies? | HyperCook and LeanBroth stop cold; EverSimmer keeps two-thirds of its output. |
-| [04_compliance_gate.md](04_compliance_gate.md) | Which variants can actually be built as specified? | Only EverSimmer clears all eight gates — but failing variants stay in the comparison. |
+| [04_compliance_gate.md](04_compliance_gate.md) | Which variants can actually be built as specified? | 20/24 checks pass; only EverSimmer clears all eight gates. |
 | [05_trade_scoring.md](05_trade_scoring.md) | Which one should we build, and how do the others compare? | EverSimmer wins three of four scenarios and 85.5% of random weightings; LeanBroth takes CostLean. |

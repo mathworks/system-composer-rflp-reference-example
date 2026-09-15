@@ -14,18 +14,20 @@
 
 | | HyperCook | LeanBroth | EverSimmer |
 |---|---|---|---|
-| Mass (kg) | 14,320 | 7,570 | 11,120 |
-| Power, rated (kW) | 498 | 239 | 363 |
-| Cost (kCr) | 1,980 | 1,070 | 1,905 |
-| Volume (m³) | 397 | 240 | 297 |
+| Mass (kg) | 14,917.5 | 7,967.5 | 11,555.0 |
+| Power, rated (kW) | 500.4 | 240.6 | 364.2 |
+| Cost (kCr) | 2,097.2 | 1,148.0 | 1,985.4 |
+| Volume (m³) | 418.2 | 254.1 | 313.1 |
 | Throughput, rated (bph) | 320 | 210 | 240 |
-| Automation | 0.944 | 0.800 | 0.956 |
-| Operators | 3.8 | 4.3 | 2.7 |
+| Automation | 0.955 | 0.838 | 0.960 |
+| Operators | 3.8 | 4.9 | 2.7 |
 
 ![Budget utilization across variants](../figures/budget_utilization.png)
 
+**HyperCook: 500.4 kW, 2097.2 kCr, 418.2 m^3.** Those totals breach the 500 kW power, 2,000 kCr cost, and 400 m^3 volume caps before anything runs. EverSimmer is close to its cost cap at 1,985.4 kCr, while LeanBroth retains comfortable resource margin.
+
 ## Why it matters
 
-This pass is fast and touches every requirement, so it is the right first cut at whether a design is even in the ballpark. But it assumes soup flows through the factory with zero losses and nothing ever breaks — these are claims on a spec sheet, not evidence from a running plant. The next card puts that claim to the test.
+This pass is fast and touches every requirement, so it is the right first cut at whether a design is even in the ballpark — and it already exposes HyperCook's three resource violations. But it assumes soup flows through the factory with zero losses and nothing ever breaks. These are claims on a spec sheet, not evidence from a running plant. The next card puts that claim to the test.
 
 Full detail: [05_trade_study_methodology.md](../05_trade_study_methodology.md)

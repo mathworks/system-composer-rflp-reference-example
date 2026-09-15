@@ -25,7 +25,7 @@ Each tier maps to an existing analysis document: the analysis tier baselines val
 
 ## 3. Suite assembly and running it
 
-Suite membership is project metadata, not a hard-coded file list: every MATLAB test class and both Simulink Test files carry the MATLAB project's `Test` classification label, and `matlab.unittest.TestSuite.fromProject(currentProject)` discovers all 81 current tests (21 behavioral component cases, 25 system cases, and 35 MATLAB tests across the other tiers). Adding a test file to the project and labeling it `Test` is enough to fold it into the suite. The component generator, runner, shared Dataset input, and 21 committed waveform baselines are also registered with the project under the `Design` classification, but are not themselves suite members.
+Suite membership is project metadata, not a hard-coded file list: every MATLAB test class and both Simulink Test files carry the MATLAB project's `Test` classification label, and `matlab.unittest.TestSuite.fromProject(currentProject)` discovers all 83 current tests (21 behavioral component cases, 25 system cases, and 37 MATLAB tests across the other tiers). Adding a test file to the project and labeling it `Test` is enough to fold it into the suite. The component generator, runner, shared Dataset input, and 21 committed waveform baselines are also registered with the project under the `Design` classification, but are not themselves suite members.
 
 `tests/runAllTests.m` wraps suite assembly, tag filtering, and a coverage plugin:
 
@@ -53,4 +53,4 @@ The practical consequence: linking tests to requirements for verification-status
 
 ## 6. Runtime
 
-The full suite (`runAllTests()`, currently 81 tests) is dominated by the system tier. The component tier takes about one to two minutes because all 21 cases perform full-waveform comparisons as well as scalar behavioral checks. Running a single tier via `runAllTests("behavior")`, `runAllTests("analysis")`, or similar remains the faster inner loop when a full system re-simulation is unnecessary.
+The full suite (`runAllTests()`, currently 83 tests) is dominated by the system tier. The component tier takes about one to two minutes because all 21 cases perform full-waveform comparisons as well as scalar behavioral checks. Running a single tier via `runAllTests("behavior")`, `runAllTests("analysis")`, or similar remains the faster inner loop when a full system re-simulation is unnecessary.

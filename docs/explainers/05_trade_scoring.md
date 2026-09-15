@@ -29,6 +29,6 @@ EverSimmer wins three of the four named scenarios and **85.5%** of the 5,000 ran
 
 Winning a few hand-picked scenarios could just mean the committee happened to ask the right questions. Winning 85.5% of 5,000 random ones means EverSimmer is the answer almost regardless of which stakeholder is in the room — that is the difference between "the committee liked it" and "it holds up under scrutiny."
 
-The share it loses is informative rather than embarrassing: it sits in weightings that care most about cost and resource margin, where LeanBroth genuinely is the better design. If the throughput floor were ever renegotiated, the recommendation would deserve a fresh look — a conversation the team can only have if the losing variants are still on the chart.
+The share it loses is informative rather than embarrassing: it sits in weightings that care most about cost and resource margin, where LeanBroth genuinely is the better design. If the throughput floor were ever renegotiated, the recommendation would deserve a fresh look — a conversation the team can only have if the losing variants are still on the chart. This comparison does not commit a baseline; ADR-035 leaves that decision open.
 
 Full detail: [05_trade_study_methodology.md](../05_trade_study_methodology.md), [06_trade_study_results.md](../06_trade_study_results.md), [10_behavioral_trade_update.md](../10_behavioral_trade_update.md)

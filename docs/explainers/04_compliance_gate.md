@@ -11,13 +11,13 @@
 
 ## What we found
 
-20 of 24 checks pass, and two of the three variants fail something.
+**20/24 checks pass**, and two of the three variants fail something.
 
 | Variant | Result |
 |---|---|
-| HyperCook | Fails power (500.4 vs. 500 kW), cost (2097 vs. 2000 kCr) and volume (418 vs. 400 m³) |
+| HyperCook | Fails power, cost, and volume — HyperCook: 500.4 kW, 2097.2 kCr, 418.2 m^3 |
 | LeanBroth | Fails throughput (196.8 vs. 200 bph floor) |
-| EverSimmer | Compliant |
+| EverSimmer | Compliant on all eight gates |
 
 LeanBroth's rated 210 bph looked safe on paper — the simulation says it is not, and a better QC bench (reject rate down to roughly 1.3%) would put it back over the line.
 

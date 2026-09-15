@@ -2,46 +2,44 @@
 
 Methodology: [`05_trade_study_methodology.md`](05_trade_study_methodology.md). Source data: [`../analysis/results/variantMetrics.csv`](../analysis/results/variantMetrics.csv), [`../analysis/results/tradeScores.csv`](../analysis/results/tradeScores.csv), [`../analysis/results/mcWinShare.csv`](../analysis/results/mcWinShare.csv), produced by [`../analysis/pipeline/runVariantAnalysis.m`](../analysis/pipeline/runVariantAnalysis.m) and [`../analysis/pipeline/runTradeStudy.m`](../analysis/pipeline/runTradeStudy.m). Variant design concepts are described in [`04_physical_variants.md`](04_physical_variants.md).
 
-The trade study has been run. This document reports the full results and the recommendation that follows from them.
+The trade study has been run. This document reports the current canonical three-candidate comparison. ADR-035 leaves the baseline decision open; the scores below are evidence for review, not a committed selection.
 
 Live pipeline note: the figures under `docs/figures` now track the full-comparison rerun over all three variants. If the formal gate narrows the candidate set, the compliant-only decision rerun is published separately under `../analysis/results/*_compliant.*` and `figures/compliant/` so these comparison figures are not overwritten.
-
-*Note: the embedded figure files track the live analysis pipeline (regenerated on every full run — currently behavioral-era numbers in the dark house theme), while the tables in this document record the static-era values as of the original study. Where they differ, the tables are the as-of-then record.*
 
 ## 1. Rolled-up metrics and budget utilization
 
 | Metric | HyperCook (A) | LeanBroth (B) | EverSimmer (C) | SR cap |
 |---|---|---|---|---|
-| Mass, kg (utilization) | 14,320 (95.5%) | 7,570 (50.5%) | 11,120 (74.1%) | ≤15,000 (SR-GS-011) |
-| Power, kW (utilization) | 498 (99.6%) | 239 (47.8%) | 363 (72.6%) | ≤500 (SR-GS-012) |
-| Cost, kCr (utilization) | 1,980 (99.0%) | 1,070 (53.5%) | 1,905 (95.3%) | ≤2,000 (SR-GS-013) |
-| Volume, m³ (utilization) | 397 (99.3%) | 240 (60.0%) | 297 (74.3%) | ≤400 (SR-GS-014) |
-| Throughput, bph (margin) | 320 (+60%) | 210 (+5%) | 240 (+20%) | ≥200 (SR-GS-002) |
-| Automation, avg | 0.944 | 0.800 (zero margin) | 0.956 | ≥0.8 (SR-GS-003) |
+| Mass, kg (utilization) | 14,917.5 (99.5%) | 7,967.5 (53.1%) | 11,555.0 (77.0%) | ≤15,000 (SR-GS-011) |
+| Power, kW (utilization) | 500.4 (100.1%) | 240.6 (48.1%) | 364.2 (72.8%) | ≤500 (SR-GS-012) |
+| Cost, kCr (utilization) | 2,097.2 (104.9%) | 1,148.0 (57.4%) | 1,985.4 (99.3%) | ≤2,000 (SR-GS-013) |
+| Volume, m³ (utilization) | 418.2 (104.6%) | 254.1 (63.5%) | 313.1 (78.3%) | ≤400 (SR-GS-014) |
+| Simulated throughput, bph (margin) | 308.4 (+54.2%) | 196.8 (−1.6%) | 231.9 (+15.9%) | ≥200 (SR-GS-002) |
+| Automation, avg | 0.955 | 0.838 | 0.960 | ≥0.8 (SR-GS-003) |
 | Operators | 3.8 | 4.9 | 2.7 | ≤5 (SR-GS-004) |
-| Availability | 0.9591 | 0.9720 | 0.9789 | — (informative) |
-| N-1 capacity retention | 0% | 0% | 66.7% (160 bph after losing one cell) | — (informative) |
-| Leaf component count | 19 | 16 | 25 (3 nested `ProductionCell`s x 5 units + 10 top-level) | — |
+| Availability | 0.9557 | 0.9696 | 0.9772 | — (informative) |
+| N-1 capacity retention | 0% | 0% | 67.3% | — (informative) |
+| Leaf component count | 25 | 20 | 28 | — |
 
 ![Resource budget utilization vs SR caps](figures/budget_utilization.png)
 
-Every variant runs at or above 95% utilization on at least one budget (HyperCook on mass/power/cost/volume simultaneously; EverSimmer on cost). LeanBroth is the only variant with comfortable margin (47.8-60.0%) across all four resource budgets.
+**HyperCook: 500.4 kW, 2097.2 kCr, 418.2 m^3.** It exceeds the power, cost, and volume caps and has only 0.5% mass margin. EverSimmer retains just 0.7% cost margin. LeanBroth is the only candidate with comfortable margin across all four resource budgets.
 
 ## 2. Compliance gates
 
-All eight SR gates pass for all three variants — every variant is a compliant candidate baseline; the trade study exists to rank compliant designs, not to eliminate non-compliant ones.
+**20/24 checks pass.** EverSimmer clears all eight gates, HyperCook fails three resource gates, and LeanBroth fails the behavioral throughput gate. The canonical trade artifacts still score all three candidates so that each candidate's strengths and failures remain visible.
 
 | Gate | SR | HyperCook | LeanBroth | EverSimmer |
 |---|---|---|---|---|
 | Mass ≤ 15,000 kg | SR-GS-011 | PASS | PASS | PASS |
-| Power ≤ 500 kW | SR-GS-012 | PASS | PASS | PASS |
-| Cost ≤ 2,000 kCr | SR-GS-013 | PASS | PASS | PASS |
-| Volume ≤ 400 m³ | SR-GS-014 | PASS | PASS | PASS |
-| Throughput ≥ 200 bph | SR-GS-002 | PASS | PASS | PASS |
+| Power ≤ 500 kW | SR-GS-012 | **FAIL** | PASS | PASS |
+| Cost ≤ 2,000 kCr | SR-GS-013 | **FAIL** | PASS | PASS |
+| Volume ≤ 400 m³ | SR-GS-014 | **FAIL** | PASS | PASS |
+| Throughput ≥ 200 bph | SR-GS-002 | PASS | **FAIL** | PASS |
 | Automation ≥ 0.8 | SR-GS-003 | PASS | PASS | PASS |
 | Operators ≤ 5 | SR-GS-004 | PASS | PASS | PASS |
 | Gravity ≥ 12 g | SR-GS-015/016 | PASS | PASS | PASS |
-| **All 8 gates** | | **PASS** | **PASS** | **PASS** |
+| **All 8 gates** | | **FAIL** | **FAIL** | **PASS** |
 
 ## 3. Criteria scores
 
@@ -53,10 +51,10 @@ Min-max normalized scores (see [`05_trade_study_methodology.md`](05_trade_study_
 
 | Scenario | HyperCook (A) | LeanBroth (B) | EverSimmer (C) | Winner |
 |---|---|---|---|---|
-| Balanced | 0.342 | 0.347 | 0.671 | EverSimmer |
-| ThroughputFirst | 0.467 | 0.297 | 0.585 | EverSimmer |
-| CostLean | 0.196 | 0.615 | 0.514 | LeanBroth |
-| MissionAssurance | 0.242 | 0.312 | 0.812 | EverSimmer |
+| Balanced | 0.346 | 0.347 | 0.685 | EverSimmer |
+| ThroughputFirst | 0.471 | 0.297 | 0.605 | EverSimmer |
+| CostLean | 0.198 | 0.615 | 0.532 | LeanBroth |
+| MissionAssurance | 0.246 | 0.312 | 0.820 | EverSimmer |
 
 ![Trade study scores under stakeholder weighting scenarios](figures/scenario_scores.png)
 
@@ -70,35 +68,35 @@ Across 5,000 random Dirichlet weight draws (`rng(42)`, see methodology §3), the
 
 | Variant | Win share |
 |---|---|
-| HyperCook (A) | 5.0% |
-| LeanBroth (B) | 11.0% |
-| EverSimmer (C) | 84.0% |
+| HyperCook (A) | 4.6% |
+| LeanBroth (B) | 9.9% |
+| EverSimmer (C) | 85.5% |
 
-EverSimmer wins 84% of random weightings spanning the full space of plausible stakeholder priorities — not just the four hand-picked scenarios above — indicating the result is not an artifact of scenario selection.
+EverSimmer wins 85.5% of random weightings spanning the full space of plausible stakeholder priorities — not just the four hand-picked scenarios above — indicating the result is not an artifact of scenario selection.
 
 ## 6. Per-variant findings
 
-**HyperCook (A).** Delivers the highest raw throughput (320 bph, +60% margin) but at the cost of running within 0.4-1.0% of the mass, power, cost, and volume caps simultaneously — the least margin of any variant on four of five budget dimensions at once. Its single-string cook/prep/transport topology also gives it 0% N-1 throughput retention, matching LeanBroth's worst case despite HyperCook being the "high-automation, high-throughput" design. It loses even the ThroughputFirst scenario to EverSimmer because near-zero margin everywhere else swamps its throughput lead once any other criterion is weighted at all.
+**HyperCook (A).** Delivers the highest simulated throughput (308.4 bph) but fails power, cost, and volume at 500.4 kW, 2,097.2 kCr, and 418.2 m³. Its single-string topology also gives it effectively 0% N-1 throughput retention. It loses even the ThroughputFirst scenario to EverSimmer because those resource and resilience penalties outweigh the raw-rate lead.
 
-**LeanBroth (B).** The clear resource-budget leader — comfortably under every mass/power/cost/volume cap (47.8-60.0% utilization) and lowest absolute cost (1,070 kCr). It meets, but does not comfortably clear, its other targets: throughput margin is only +5% (210 vs. 200 bph floor) and automation is exactly at the 0.8 floor with zero margin. It wins the CostLean scenario and takes a real (11%) share of the Monte Carlo draws, confirming it is the right choice specifically when budget headroom is prioritized over throughput or resilience.
+**LeanBroth (B).** The clear resource-budget leader and lowest-cost candidate at 1,148.0 kCr. Its simulated 196.8 bph misses the 200 bph floor, however. It wins CostLean and 9.9% of the Monte Carlo draws, making it a meaningful descope option only if the throughput finding is fixed or the requirement changes.
 
-**EverSimmer (C).** Wins 3 of 4 named scenarios and 84% of random weightings — the most robust performer across the plausible range of stakeholder priorities. Its triplicated-cell topology is the only one of the three with any graceful degradation at all (66.7% retention, 160 bph after losing one cell), and it leads on automation (0.956) and availability (0.9789) as well. Its principal weakness is cost: at 1,905 kCr it is 95.3% of the cost cap, second only to HyperCook, with just a 4.7% cost margin — the resilience and autonomy gains are not free.
+**EverSimmer (C).** Wins 3 of 4 named scenarios and 85.5% of random weightings. Its triplicated-cell topology is the only one with graceful degradation (67.3% retention), and it leads on automation and availability. Its principal resource risk is cost: 1,985.4 kCr leaves only 14.6 kCr of margin.
 
 ## 7. Caveats
 
-1. **EverSimmer's cost margin is only 4.7%.** At 1,905 of 2,000 kCr, EverSimmer has the least cost headroom of any compliant variant apart from HyperCook. Any further requirement growth, vendor cost increase, or triplicated-cell scope creep is a real risk of pushing it over the SR-GS-013 cost cap.
-2. **EverSimmer's degraded-mode throughput (160 bph) is below the SR-GS-002 nominal floor (200 bph).** The 66.7% N-1 retention figure satisfies the *intent* of SR-GS-026 (no uncontrolled production halt from a single fault) as a graceful-degradation contingency mode, but 160 bph is not a compliant steady-state operating point against SR-GS-002. Degraded operation following a cell loss must be treated and documented as a contingency mode, not an alternate compliant nominal state.
-3. **LeanBroth passes automation (SR-GS-003) with exactly zero margin.** At 0.800 average automation against a 0.8 floor, any single component substitution, added manual step, or measurement rounding could tip LeanBroth into non-compliance. This is the tightest gate margin observed across all three variants on any SR.
-4. **HyperCook is one requirement-growth event away from multiple simultaneous violations.** Its power (0.4% margin), cost (1.0% margin), and volume (0.7% margin) margins are all under 1%. A single component overrun in any of these dimensions — not unusual during detailed design — would likely cascade into cap violations across more than one budget at once, since HyperCook has essentially no slack to absorb it in any of the three.
+1. **EverSimmer's cost margin is only 0.7%.** At 1,985.4 of 2,000 kCr, a modest vendor or scope change can create a new non-compliance.
+2. **EverSimmer's degraded mode is a contingency, not nominal compliance.** Its 67.3% retention demonstrates graceful degradation for SR-GS-026, but the resulting rate remains below the SR-GS-002 nominal floor.
+3. **LeanBroth is inexpensive but non-compliant.** Its CostLean win must be read alongside the 196.8 bph throughput finding.
+4. **HyperCook already exceeds three resource caps.** Detailed design needs a concrete recovery plan, not merely additional margin management.
 
-## 8. Recommendation
+## 8. Selection status
 
-**Adopt EverSimmer (Variant C) as the baseline physical architecture.**
+**No baseline is committed under ADR-035.**
 
-EverSimmer wins 3 of 4 stakeholder weighting scenarios (Balanced 0.671, ThroughputFirst 0.585, MissionAssurance 0.812 — all highest of the three) and 84% of 5,000 Monte Carlo random weightings, the most robust result of any variant across the plausible range of stakeholder priorities. It is the only variant offering any graceful degradation under single-fault conditions (66.7% N-1 retention vs. 0% for both HyperCook and LeanBroth), leads on automation and availability, and clears all eight SR compliance gates.
+EverSimmer currently leads the evidence: it wins 3 of 4 stakeholder scenarios and 85.5% of 5,000 Monte Carlo draws, is the only variant with graceful single-fault degradation, and is the only candidate that clears all eight quantitative gates. That makes it the strongest candidate, not an adopted baseline.
 
-This recommendation carries three follow-up actions to address the caveats above:
+The next selection review should carry three follow-up actions:
 
-1. **Negotiate a cost reserve or descope items** to widen EverSimmer's 4.7% cost margin before detailed design locks in triplicated-cell vendor costs, since it is currently the second-tightest cost margin of the three variants.
-2. **Define a degraded-mode operations procedure** for the 160 bph single-cell-loss contingency, documenting it explicitly as a below-nominal contingency state (not a compliant steady-state alternative to the 200 bph SR-GS-002 floor) with clear criteria for when to invoke it and how operations and customer commitments adjust while in it.
-3. **Carry LeanBroth as a documented descope option.** If budget priorities shift and mass/power/cost/volume margin becomes the dominant driver, LeanBroth's CostLean-scenario win (0.615) and 11% Monte Carlo win share make it the next-best alternative to re-evaluate, given it comfortably clears every resource budget where EverSimmer and HyperCook do not.
+1. **Create cost margin for EverSimmer** before any selection, because only 14.6 kCr remains.
+2. **Define EverSimmer degraded-mode operations** as a below-nominal contingency state.
+3. **Retain explicit recovery paths for the alternatives:** LeanBroth needs throughput improvement; HyperCook needs power, cost, and volume reductions.

@@ -34,21 +34,21 @@ Two hard assertions protect the chain:
 1. The number of logged status signals must equal the number of gates (catches a drifted gate model).
 2. Every formal verdict must equal the corresponding procedural `OK_*` flag from `runVariantAnalysis` (the two independently implemented compliance paths cross-check each other; a mismatch is an error, not a warning).
 
-`runFullAnalysis.m` sequences the whole chain: roll-up, then formal gate, then MCDA. It always regenerates the three-variant comparison artifacts first, then, if the formal gate narrows the candidate set, writes the compliant-only decision rerun to tagged outputs (for example `tradeScores_compliant.csv` and `docs/figures/compliant/`) so the published comparison figures are not overwritten. This preserves the methodological position that a non-compliant variant has no business being scored for selection while keeping the full trade space visible in the docs.
+`runFullAnalysis.m` sequences the whole chain: roll-up, then formal gate, then MCDA. It always regenerates the three-variant comparison artifacts first, then, if the formal gate narrows the candidate set, writes the compliant-only decision rerun to tagged outputs (for example `tradeScores_compliant.csv` and `docs/figures/compliant/`) so the published comparison figures are not overwritten. The canonical artifacts keep all three candidates visible and carry each gate verdict into the comparison; the compliant-only rerun remains available for decision exercises without replacing that record.
 
 ## 4. Results
 
-All 24 variant-gate checks pass and agree with the baseline procedural flags ([`complianceGate.csv`](../analysis/results/complianceGate.csv)):
+**20/24 checks pass**, and all 24 formal verdicts agree with the procedural flags ([`complianceGate.csv`](../analysis/results/complianceGate.csv)):
 
 | Variant | Mass | Power | Cost | Volume | Throughput | Automation | Operators | Gravity |
 |---|---|---|---|---|---|---|---|---|
-| HyperCook | pass | pass | pass | pass | pass | pass | pass | pass |
-| LeanBroth | pass | pass | pass | pass | pass | pass | pass | pass |
+| HyperCook | pass | **fail** | **fail** | **fail** | pass | pass | pass | pass |
+| LeanBroth | pass | pass | pass | pass | **fail** | pass | pass | pass |
 | EverSimmer | pass | pass | pass | pass | pass | pass | pass | pass |
 
-A deliberate negative test (HyperCook metrics with power inflated to 600 kW against the 500 kW cap) flagged exactly the Power row and no others, confirming the gate detects violations and localizes them to the right requirement.
+HyperCook fails at 500.4 kW, 2,097.2 kCr, and 418.2 m³ against the 500 kW, 2,000 kCr, and 400 m³ caps. LeanBroth fails throughput at 196.8 bph against the 200 bph floor. EverSimmer clears all eight gates.
 
-The trade study rerun downstream of the gate reproduces the baseline results exactly (deterministic with `rng(42)`): EverSimmer wins Balanced/ThroughputFirst/MissionAssurance and 84.0% of the Monte Carlo weight draws. This is the expected outcome: the gate changes *how compliance is established*, not the metric values or scoring.
+The canonical trade study downstream of the gate scores all three candidates deterministically (`rng(42)`). EverSimmer wins Balanced, ThroughputFirst, and MissionAssurance plus 85.5% of the Monte Carlo draws; LeanBroth wins CostLean. ADR-035 keeps those results as comparative evidence and commits no baseline.
 
 ## 5. Implementation notes and API gotchas (R2026a)
 

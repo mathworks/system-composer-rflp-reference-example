@@ -44,7 +44,7 @@ A supervisory-telemetry limitation surfaces in this pass: `plantMode` (the new `
 
 ## 3. LeanBroth formally fails SR-GS-002
 
-**LeanBroth's simulated steady throughput, 196.8 bph, is below the 200 bph SR-GS-002 floor.** The formal Requirements Table gate ([`08_formal_compliance_gate.md`](08_formal_compliance_gate.md)) flags exactly the Throughput row for LeanBroth and no other row, for any variant — 23 of 24 formal/procedural cross-checks pass, and the one disagreement is a genuine compliance failure rather than a formal/procedural drift (the procedural `OK_Throughput` flag agrees with the formal verdict; both say fail). Since this update the gate has picked up two more failing cells: the committed [`../analysis/results/complianceGate.csv`](../analysis/results/complianceGate.csv) records 21 of 24 passing, adding HyperCook's Cost and Volume rows (2,061.2 kCr against the 2,000 kCr SR-GS-013 cap, 417.3 m³ against the 400 m³ SR-GS-014 cap) once the storage racks sized by ADR-032 landed in the roll-up. The formal and procedural paths still agree on every cell.
+**LeanBroth's simulated steady throughput, 196.8 bph, is below the 200 bph SR-GS-002 floor.** At the time of this behavioral update it was the only failed cell. The current committed [`../analysis/results/complianceGate.csv`](../analysis/results/complianceGate.csv) reports **20/24 checks pass**: HyperCook now also fails Power, Cost, and Volume at 500.4 kW, 2,097.2 kCr, and 418.2 m³ after the storage-rack and bay-status-concentrator decisions. The formal and procedural paths agree on every current cell.
 
 LeanBroth's static throughput margin was only +5% (210 vs. 200 bph — already the tightest margin of any variant on any gate, flagged as a caveat in [`06_trade_study_results.md`](06_trade_study_results.md) §7 item 3 for automation, and true of throughput too). That 5% margin is exactly the kind of headroom the QC reject fraction and calibration downtime were sized to consume: 3% manual-QC reject plus roughly 4.2% calibration downtime on LeanBroth's single QC bench account for essentially all of the shortfall.
 
@@ -71,12 +71,12 @@ EverSimmer now wins **all four** named scenarios, including CostLean — where L
 
 | Scenario | HyperCook | LeanBroth | EverSimmer | Winner |
 |---|---|---|---|---|
-| Balanced | 0.342 | 0.347 | 0.682 | EverSimmer |
-| ThroughputFirst | 0.467 | 0.297 | 0.602 | EverSimmer |
-| CostLean | 0.196 | 0.615 | 0.525 | LeanBroth |
-| MissionAssurance | 0.242 | 0.312 | 0.819 | EverSimmer |
+| Balanced | 0.346 | 0.347 | 0.685 | EverSimmer |
+| ThroughputFirst | 0.471 | 0.297 | 0.605 | EverSimmer |
+| CostLean | 0.198 | 0.615 | 0.532 | LeanBroth |
+| MissionAssurance | 0.246 | 0.312 | 0.820 | EverSimmer |
 
-Monte Carlo weight sensitivity over the same 5,000 draws ([`../analysis/results/mcWinShare.csv`](../analysis/results/mcWinShare.csv)): **EverSimmer 85.2%, LeanBroth 10.3%, HyperCook 4.5%**. So EverSimmer wins three of the four named scenarios rather than all four: LeanBroth takes CostLean at 0.615, as it did at the static baseline ([`06_trade_study_results.md`](06_trade_study_results.md) §4), and with three variants back in the normalization the scores recover the spread the two-variant run compressed. This does not retract §3 — LeanBroth is scored here but still fails SR-GS-002, so its CostLean win is a descope option to weigh against that failure, not a compliant recommendation.
+Monte Carlo weight sensitivity over the same 5,000 draws ([`../analysis/results/mcWinShare.csv`](../analysis/results/mcWinShare.csv)): **EverSimmer 85.5%, LeanBroth 9.9%, HyperCook 4.6%**. So EverSimmer wins three of the four named scenarios rather than all four: LeanBroth takes CostLean at 0.615, as it did at the static baseline ([`06_trade_study_results.md`](06_trade_study_results.md) §4), and with three variants back in the normalization the scores recover the spread the two-variant run compressed. This does not retract §3 — LeanBroth is scored here but still fails SR-GS-002, so its CostLean win is a descope option to weigh against that failure, not a compliant recommendation.
 
 ## 5. Figures
 
